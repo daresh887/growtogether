@@ -12,9 +12,7 @@ export async function updateSession(request: NextRequest) {
         {
             cookies: {
                 getAll() {
-                    const allCookies = request.cookies.getAll()
-                    console.log('[Middleware] Incoming Cookies:', allCookies.map(c => `${c.name}: ${c.value.substring(0, 5)}...`))
-                    return allCookies
+                    return request.cookies.getAll()
                 },
                 setAll(cookiesToSet) {
                     cookiesToSet.forEach(({ name, value, options }) =>
@@ -44,7 +42,9 @@ export async function updateSession(request: NextRequest) {
         !request.nextUrl.pathname.startsWith('/login') &&
         !request.nextUrl.pathname.startsWith('/auth') &&
         request.nextUrl.pathname !== '/' &&
-        !request.nextUrl.pathname.startsWith('/onboarding')
+        !request.nextUrl.pathname.startsWith('/onboarding') &&
+        !request.nextUrl.pathname.startsWith('/forgot-password') &&
+        !request.nextUrl.pathname.startsWith('/update-password')
     ) {
         // no user, redirect to login page
         const url = request.nextUrl.clone()

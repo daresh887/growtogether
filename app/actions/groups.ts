@@ -99,12 +99,19 @@ export async function createGroup(data: CreateGroupData) {
         throw new Error("You must be logged in to create a group");
     }
 
+    // Input validation
+    if (!data.name || data.name.trim().length === 0) throw new Error("Group name is required");
+    if (data.name.length > 100) throw new Error("Group name must be under 100 characters");
+    if (data.description && data.description.length > 1000) throw new Error("Description must be under 1,000 characters");
+    if (data.rules && data.rules.length > 20) throw new Error("Maximum 20 rules allowed");
+    if (data.groupDNA?.motto && data.groupDNA.motto.length > 200) throw new Error("Motto must be under 200 characters");
+
     // 1. Create the group
     const { data: group, error: groupError } = await supabase
         .from("groups")
         .insert({
-            name: data.name,
-            description: data.description,
+            name: data.name.trim(),
+            description: (data.description || "").trim(),
             emoji: data.emoji,
             category: data.category,
             created_by: user.id,
@@ -407,7 +414,19 @@ export async function uploadPostImage(file: File): Promise<string> {
         throw new Error("You must be logged in to upload images");
     }
 
-    const fileExt = file.name.split('.').pop();
+    // Validate file type
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+        throw new Error("Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.");
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+        throw new Error("File too large. Maximum size is 5MB.");
+    }
+
+    const fileExt = file.name.split('.').pop() || "jpg";
     const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
     const { data, error } = await supabase.storage
@@ -418,7 +437,6 @@ export async function uploadPostImage(file: File): Promise<string> {
         });
 
     if (error) {
-        console.error("Error uploading image:", error);
         throw new Error("Failed to upload image");
     }
 
@@ -430,21 +448,41 @@ export async function uploadPostImage(file: File): Promise<string> {
 }
 
 export async function createPost(groupId: string, content: string, options?: Omit<CreatePostData, 'content'>) {
-    console.log("[createPost] Starting...", { groupId, contentLength: content.length, options });
     const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
-        console.error("[createPost] Auth error:", userError);
         throw new Error("You must be logged in to post");
     }
-    console.log("[createPost] User authenticated:", user.id);
+
+    // Input validation
+    if (!content || content.trim().length === 0) throw new Error("Post content is required");
+    if (content.length > 5000) throw new Error("Post must be under 5,000 characters");
+    if (options?.images && options.images.length > 10) throw new Error("Maximum 10 images per post");
+
+    // Rate limiting: check last post time (30 second cooldown)
+    const { data: lastPost } = await supabase
+        .from("posts")
+        .select("created_at")
+        .eq("user_id", user.id)
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+    if (lastPost) {
+        const timeSinceLastPost = Date.now() - new Date(lastPost.created_at).getTime();
+        if (timeSinceLastPost < 30_000) {
+            const waitSeconds = Math.ceil((30_000 - timeSinceLastPost) / 1000);
+            throw new Error(`Please wait ${waitSeconds} seconds before posting again`);
+        }
+    }
 
     // Build insert data with optional fields
     const insertData: Record<string, any> = {
         group_id: groupId,
         user_id: user.id,
-        content,
+        content: content.trim(),
     };
 
     // Add optional fields if provided (these columns may not exist yet)
@@ -469,24 +507,18 @@ export async function createPost(groupId: string, content: string, options?: Omi
         .single();
 
     if (postError) {
-        console.error("[createPost] Error creating post:", postError);
         throw new Error("Failed to create post");
     }
-    console.log("[createPost] Post created successfully:", postData?.id);
 
     // 2. Update streak
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-    const { data: member, error: memberError } = await supabase
+    const { data: member } = await supabase
         .from("group_members")
         .select("last_posted_at, streak_count")
         .eq("group_id", groupId)
         .eq("user_id", user.id)
         .single();
-
-    if (memberError) {
-        console.warn("[createPost] Error fetching member for streak:", memberError);
-    }
 
     let newStreak = 1;
     if (member?.last_posted_at) {
@@ -507,17 +539,11 @@ export async function createPost(groupId: string, content: string, options?: Omi
         // Else: streak resets to 1
     }
 
-    const { error: updateError } = await supabase
+    await supabase
         .from("group_members")
         .update({ streak_count: newStreak, last_posted_at: today })
         .eq("group_id", groupId)
         .eq("user_id", user.id);
-
-    if (updateError) {
-        console.error("[createPost] Error updating streak:", updateError);
-    } else {
-        console.log("[createPost] Streak updated:", newStreak);
-    }
 
     revalidatePath(`/groups/${groupId}`);
     return { success: true, streakCount: newStreak };
@@ -528,7 +554,6 @@ export async function getGroupPosts(
     options: { sortBy?: 'recent' | 'popular'; timeFrame?: 'all' | 'week' | 'day' } = {}
 ) {
     const { sortBy = 'recent', timeFrame = 'all' } = options;
-    console.log("[getGroupPosts] Fetching posts for group:", groupId, options);
     const supabase = await createClient();
 
     // Base query - still order by created_at for initial fetch efficiency
@@ -568,7 +593,7 @@ export async function getGroupPosts(
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    console.log("[getGroupPosts] Posts found:", posts?.length || 0);
+
 
     const mappedPosts = posts.map((post: any) => {
         // Count reactions
@@ -688,16 +713,36 @@ export async function addComment(postId: string, content: string, groupId: strin
 
     if (userError || !user) throw new Error("Unauthorized");
 
+    // Input validation
+    if (!content || content.trim().length === 0) throw new Error("Comment cannot be empty");
+    if (content.length > 2000) throw new Error("Comment must be under 2,000 characters");
+
+    // Rate limiting: 10 second cooldown between comments
+    const { data: lastComment } = await supabase
+        .from("post_comments")
+        .select("created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+    if (lastComment) {
+        const timeSinceLastComment = Date.now() - new Date(lastComment.created_at).getTime();
+        if (timeSinceLastComment < 10_000) {
+            const waitSeconds = Math.ceil((10_000 - timeSinceLastComment) / 1000);
+            throw new Error(`Please wait ${waitSeconds} seconds before commenting again`);
+        }
+    }
+
     const { error } = await supabase
         .from("post_comments")
         .insert({
             post_id: postId,
             user_id: user.id,
-            content,
+            content: content.trim(),
         });
 
     if (error) {
-        console.error("Error adding comment:", error);
         throw new Error("Failed to add comment");
     }
 

@@ -72,6 +72,13 @@ export async function updateProfile(data: ProfileUpdateData) {
         throw new Error("You must be logged in to update your profile");
     }
 
+    // Input validation
+    if (data.display_name && data.display_name.length > 50) throw new Error("Display name must be under 50 characters");
+    if (data.username && data.username.length > 30) throw new Error("Username must be under 30 characters");
+    if (data.bio && data.bio.length > 500) throw new Error("Bio must be under 500 characters");
+    if (data.interests && data.interests.length > 20) throw new Error("Maximum 20 interests allowed");
+    if (data.goals && data.goals.length > 20) throw new Error("Maximum 20 goals allowed");
+
     const { error } = await supabase.auth.updateUser({
         data: {
             display_name: data.display_name,
