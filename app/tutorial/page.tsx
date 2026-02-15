@@ -221,7 +221,7 @@ export default function TutorialPage() {
                                     <span className="text-xs font-semibold text-muted-foreground">Group Leaderboard</span>
                                 </div>
                                 {[
-                                    { rank: 1, name: "Sarah K.", streak: 47, you: false },
+                                    { rank: 1, name: "Josh", streak: 47, you: false },
                                     { rank: 2, name: "You", streak: streakCount, you: true },
                                     { rank: 3, name: "Marcus", streak: 19, you: false },
                                 ].map(m => (

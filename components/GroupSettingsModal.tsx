@@ -12,15 +12,34 @@ import {
     uploadGroupIcon,
 } from "@/app/actions/groups";
 import { compressImage } from "@/utils/compressImage";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { X, Plus, Loader2, Shield, Crown, Trash2, UserMinus, Settings, Users, AlertTriangle } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { X, Plus, Loader2, Shield, Crown, Trash2, UserMinus, Settings, Users, AlertTriangle, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/utils/supabase/client";
 
 type Props = {
     isOpen: boolean;
@@ -55,13 +74,14 @@ export default function GroupSettingsModal({
     const [members, setMembers] = useState<GroupMember[]>([]);
     const [membersLoading, setMembersLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
     const [name, setName] = useState(groupName);
     const [description, setDescription] = useState(groupDescription);
     const [emoji, setEmoji] = useState(groupEmoji);
-    const [iconUrl, setIconUrl] = useState(groupIconUrl);
+    const [iconUrl, setIconUrl] = useState<string | null | undefined>(groupIconUrl);
     const [uploadingIcon, setUploadingIcon] = useState(false);
     const [rules, setRules] = useState<string[]>(groupRules);
     const [newRule, setNewRule] = useState("");
@@ -71,8 +91,22 @@ export default function GroupSettingsModal({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showTransferConfirm, setShowTransferConfirm] = useState(false);
     const [selectedNewOwner, setSelectedNewOwner] = useState<string | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+    // Confirmation Dialog State
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [memberToRemove, setMemberToRemove] = useState<{ id: string, name: string } | null>(null);
 
     const commonEmojis = ["🎯", "💪", "📚", "💻", "🎨", "✍️", "🎵", "💼", "🧘", "🔥", "⚡", "🚀", "🌟", "💎", "🎮", "📈"];
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) setCurrentUserId(user.id);
+        };
+        fetchUser();
+    }, []);
 
     useEffect(() => {
         if (isOpen && activeTab === "members") loadMembers();
@@ -153,13 +187,19 @@ export default function GroupSettingsModal({
         }
     };
 
-    const handleRemoveMember = async (userId: string, displayName: string) => {
-        if (!confirm(`Remove ${displayName} from the group?`)) return;
+    const handleRemoveMemberClick = (userId: string, displayName: string) => {
+        setMemberToRemove({ id: userId, name: displayName });
+        setConfirmOpen(true);
+    };
+
+    const handleConfirmRemoveMember = async () => {
+        if (!memberToRemove) return;
         try {
-            await removeMember(groupId, userId);
-            setMembers(prev => prev.filter(m => m.userId !== userId));
-            setSuccess(`${displayName} removed from the group`);
+            await removeMember(groupId, memberToRemove.id);
+            setMembers(prev => prev.filter(m => m.userId !== memberToRemove.id));
+            setSuccess(`Removed ${memberToRemove.name} from the group`);
             setTimeout(() => setSuccess(null), 3000);
+            setConfirmOpen(false); // Close dialog
         } catch (err: any) {
             setError(err.message);
         }
@@ -184,10 +224,13 @@ export default function GroupSettingsModal({
             return;
         }
         try {
+            setLoading(true);
             await deleteGroup(groupId);
             onGroupDeleted();
         } catch (err: any) {
             setError(err.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -199,51 +242,23 @@ export default function GroupSettingsModal({
         setRules(rules.filter((_, i) => i !== index));
     };
 
-    if (!isOpen) return null;
-
-    const tabs = [
-        { id: "edit" as const, label: "Edit Group", icon: Settings },
-        { id: "members" as const, label: "Members", icon: Users },
-        { id: "danger" as const, label: "Danger Zone", icon: AlertTriangle },
-    ];
+    const isAdmin = members.find(m => m.userId === currentUserId)?.role === "owner" || members.find(m => m.userId === currentUserId)?.role === "moderator";
 
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] p-6" onClick={onClose}>
-            <Card className="w-full max-w-xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-                {/* Header */}
-                <div className="p-6 border-b border-border flex justify-between items-center shrink-0">
-                    <h2 className="text-xl font-bold">⚙️ Group Settings</h2>
-                    <Button variant="ghost" size="icon" onClick={onClose}><X size={18} /></Button>
-                </div>
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Group Settings</DialogTitle>
+                </DialogHeader>
 
-                {/* Tabs */}
-                {isOwner && (
-                    <div className="flex gap-2 px-6 py-4 border-b border-border shrink-0">
-                        {tabs.map(tab => (
-                            <Button
-                                key={tab.id}
-                                variant={activeTab === tab.id ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => setActiveTab(tab.id)}
-                                className={cn(activeTab === tab.id && tab.id === "danger" && "bg-destructive hover:bg-destructive/90")}
-                            >
-                                <tab.icon size={14} className="mr-1.5" /> {tab.label}
-                            </Button>
-                        ))}
-                    </div>
-                )}
+                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full">
+                    <TabsList className="grid w-full grid-cols-3 mb-6">
+                        <TabsTrigger value="edit">General</TabsTrigger>
+                        <TabsTrigger value="members">Members</TabsTrigger>
+                        <TabsTrigger value="danger">Danger Zone</TabsTrigger>
+                    </TabsList>
 
-                {/* Error/Success Messages */}
-                {(error || success) && (
-                    <div className={cn("mx-6 mt-4 p-3 rounded-xl text-sm border", error ? "bg-destructive/10 border-destructive/30 text-destructive" : "bg-green-500/10 border-green-500/30 text-green-500")}>
-                        {error || success}
-                    </div>
-                )}
-
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6">
-                    {/* Edit Tab */}
-                    {activeTab === "edit" && (
+                    <TabsContent value="edit" className="space-y-4">
                         <div className="space-y-5">
                             {/* Group Icon */}
                             <div>
@@ -376,11 +391,10 @@ export default function GroupSettingsModal({
                                 {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Saving...</> : "Save Changes"}
                             </Button>
                         </div>
-                    )}
+                    </TabsContent>
 
-                    {/* Members Tab */}
-                    {activeTab === "members" && (
-                        <div>
+                    <TabsContent value="members" className="space-y-4">
+                        <div className="space-y-4">
                             {membersLoading ? (
                                 <div className="text-center py-10 text-muted-foreground flex items-center justify-center gap-2">
                                     <Loader2 className="h-5 w-5 animate-spin" /> Loading members...
@@ -390,7 +404,11 @@ export default function GroupSettingsModal({
                                     {members.map(member => (
                                         <div key={member.userId} className="flex items-center gap-3 p-4 bg-muted rounded-xl border border-border">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center font-bold text-primary-foreground">
-                                                {member.displayName.charAt(0).toUpperCase()}
+                                                {member.avatarUrl ? (
+                                                    <img src={member.avatarUrl} alt={member.displayName} className="w-full h-full object-cover rounded-full" />
+                                                ) : (
+                                                    member.displayName.charAt(0).toUpperCase()
+                                                )}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-0.5">
@@ -400,14 +418,26 @@ export default function GroupSettingsModal({
                                                 </div>
                                                 <div className="text-xs text-muted-foreground">🔥 {member.streak} day streak</div>
                                             </div>
-                                            {member.role !== "owner" && (
+                                            {member.role !== "owner" && isAdmin && member.userId !== currentUserId && (
                                                 <div className="flex gap-1.5 shrink-0">
-                                                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => handleToggleModerator(member.userId, member.role)}>
-                                                        {member.role === "moderator" ? "Remove Mod" : "Make Mod"}
-                                                    </Button>
-                                                    <Button variant="outline" size="sm" className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => handleRemoveMember(member.userId, member.displayName)}>
-                                                        <UserMinus size={12} />
-                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                                <MoreVertical size={16} />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleToggleModerator(member.userId, member.role)}>
+                                                                {member.role === "moderator" ? "Demote to Member" : "Promote to Moderator"}
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                className="text-destructive focus:text-destructive"
+                                                                onClick={() => handleRemoveMemberClick(member.userId, member.displayName)}
+                                                            >
+                                                                Remove from Group
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
                                             )}
                                         </div>
@@ -418,73 +448,91 @@ export default function GroupSettingsModal({
                                 </div>
                             )}
                         </div>
-                    )}
+                    </TabsContent>
 
-                    {/* Danger Zone Tab */}
-                    {activeTab === "danger" && (
-                        <div className="space-y-6">
-                            {/* Transfer Ownership */}
-                            <div className="p-5 bg-yellow-500/5 rounded-xl border border-yellow-500/20">
-                                <h3 className="font-bold mb-2 text-yellow-500 flex items-center gap-2"><Crown size={16} /> Transfer Ownership</h3>
-                                <p className="text-sm text-muted-foreground mb-4">Transfer your ownership to another member. You will become a regular member.</p>
-                                {!showTransferConfirm ? (
-                                    <Button variant="outline" className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10" onClick={() => { loadMembers(); setShowTransferConfirm(true); }}>
-                                        Transfer Ownership
-                                    </Button>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <select
-                                            value={selectedNewOwner || ""}
-                                            onChange={e => setSelectedNewOwner(e.target.value)}
-                                            className="w-full p-3 bg-background border border-border rounded-lg text-sm"
-                                        >
-                                            <option value="">Select new owner...</option>
-                                            {members.filter(m => m.role !== "owner").map(m => (
-                                                <option key={m.userId} value={m.userId}>{m.displayName}</option>
-                                            ))}
-                                        </select>
-                                        <div className="flex gap-2">
-                                            <Button variant="outline" size="sm" onClick={() => setShowTransferConfirm(false)}>Cancel</Button>
-                                            <Button size="sm" className="bg-yellow-500 text-black hover:bg-yellow-600" onClick={handleTransferOwnership} disabled={!selectedNewOwner}>
-                                                Confirm Transfer
-                                            </Button>
-                                        </div>
+                    <TabsContent value="danger" className="space-y-6">
+                        {/* Transfer Ownership */}
+                        <div className="p-5 bg-yellow-500/5 rounded-xl border border-yellow-500/20">
+                            <h3 className="font-bold mb-2 text-yellow-500 flex items-center gap-2"><Crown size={16} /> Transfer Ownership</h3>
+                            <p className="text-sm text-muted-foreground mb-4">Transfer your ownership to another member. You will become a regular member.</p>
+                            {!showTransferConfirm ? (
+                                <Button variant="outline" className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10" onClick={() => { loadMembers(); setShowTransferConfirm(true); }}>
+                                    Transfer Ownership
+                                </Button>
+                            ) : (
+                                <div className="space-y-3">
+                                    <select
+                                        value={selectedNewOwner || ""}
+                                        onChange={e => setSelectedNewOwner(e.target.value)}
+                                        className="w-full p-3 bg-background border border-border rounded-lg text-sm"
+                                    >
+                                        <option value="">Select new owner...</option>
+                                        {members.filter(m => m.role !== "owner").map(m => (
+                                            <option key={m.userId} value={m.userId}>{m.displayName}</option>
+                                        ))}
+                                    </select>
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => setShowTransferConfirm(false)}>Cancel</Button>
+                                        <Button size="sm" className="bg-yellow-500 text-black hover:bg-yellow-600" onClick={handleTransferOwnership} disabled={!selectedNewOwner}>
+                                            Confirm Transfer
+                                        </Button>
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Delete Group */}
-                            <div className="p-5 bg-destructive/5 rounded-xl border border-destructive/20">
-                                <h3 className="font-bold mb-2 text-destructive flex items-center gap-2"><Trash2 size={16} /> Delete Group</h3>
-                                <p className="text-sm text-muted-foreground mb-4">Permanently delete this group and all its content. This action cannot be undone.</p>
-                                {!showDeleteConfirm ? (
-                                    <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => setShowDeleteConfirm(true)}>
-                                        Delete Group
-                                    </Button>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <p className="text-sm text-muted-foreground">
-                                            Type <strong className="text-destructive">{groupName}</strong> to confirm:
-                                        </p>
-                                        <Input
-                                            value={deleteConfirmation}
-                                            onChange={e => setDeleteConfirmation(e.target.value)}
-                                            placeholder="Type group name..."
-                                            className="border-destructive/30"
-                                        />
-                                        <div className="flex gap-2">
-                                            <Button variant="outline" size="sm" onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmation(""); }}>Cancel</Button>
-                                            <Button variant="destructive" size="sm" onClick={handleDeleteGroup} disabled={deleteConfirmation !== groupName}>
-                                                Delete Forever
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
-            </Card>
-        </div>
+
+                        {/* Delete Group */}
+                        <div className="p-5 bg-destructive/5 rounded-xl border border-destructive/20">
+                            <h3 className="font-bold mb-2 text-destructive flex items-center gap-2"><Trash2 size={16} /> Delete Group</h3>
+                            <p className="text-sm text-muted-foreground mb-4">Permanently delete this group and all its content. This action cannot be undone.</p>
+                            {!showDeleteConfirm ? (
+                                <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => setShowDeleteConfirm(true)}>
+                                    Delete Group
+                                </Button>
+                            ) : (
+                                <div className="space-y-3">
+                                    <p className="text-sm text-muted-foreground">
+                                        Type <strong className="text-destructive">{groupName}</strong> to confirm:
+                                    </p>
+                                    <Input
+                                        value={deleteConfirmation}
+                                        onChange={e => setDeleteConfirmation(e.target.value)}
+                                        placeholder="Type group name..."
+                                        className="border-destructive/30"
+                                    />
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmation(""); }}>Cancel</Button>
+                                        <Button variant="destructive" size="sm" onClick={handleDeleteGroup} disabled={deleteConfirmation !== groupName}>
+                                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Forever"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </TabsContent>
+                </Tabs>
+
+                {error && (
+                    <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md mt-2">
+                        {error}
+                    </div>
+                )}
+                {success && (
+                    <div className="text-sm text-green-500 bg-green-500/10 p-3 rounded-md mt-2">
+                        {success}
+                    </div>
+                )}
+            </DialogContent>
+
+            <ConfirmationDialog
+                open={confirmOpen}
+                onOpenChange={setConfirmOpen}
+                title="Remove Member"
+                description={`Are you sure you want to remove ${memberToRemove?.name} from the group?`}
+                confirmText="Remove"
+                variant="destructive"
+                onConfirm={handleConfirmRemoveMember}
+            />
+        </Dialog>
     );
 }

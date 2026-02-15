@@ -13,9 +13,9 @@ import { cn } from "@/lib/utils";
 // ============================================
 
 const testimonials = [
-    { name: "Sarah K.", streak: 47, text: "Finally finished my side project!", avatar: "👩‍💼" },
-    { name: "Marcus T.", streak: 89, text: "Lost 30 lbs with my group!", avatar: "👨‍🎨" },
-    { name: "Elena R.", streak: 156, text: "Learned Spanish in 6 months!", avatar: "👩‍💻" },
+    { name: "Josh", streak: 47, text: "Finally finished my side project!", avatar: "/images/avatars/josh.png" },
+    { name: "Marcus T.", streak: 89, text: "Lost 30 lbs with my group!", avatar: "/images/avatars/alex.webp" },
+    { name: "Diana R.", streak: 156, text: "Learned Spanish in 6 months!", avatar: "/images/avatars/diana.png" },
 ];
 
 const sampleGroups = [
@@ -232,7 +232,9 @@ function AppPreviewSection() {
                                 <Card>
                                     <CardContent className="p-0">
                                         <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
-                                            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-xl">👨‍💻</div>
+                                            <div className="w-10 h-10 rounded-full overflow-hidden">
+                                                <img src="/images/avatars/vladimir.png" alt="Alex M." className="w-full h-full object-cover" />
+                                            </div>
                                             <div className="flex-1">
                                                 <div className="font-semibold text-sm">Alex M.</div>
                                                 <div className="text-xs text-muted-foreground">Just now · Day 23</div>
@@ -356,7 +358,13 @@ function TestimonialsSection() {
                                 i === activeIndex ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
                             )}
                         >
-                            <div className="text-6xl mb-4">{t.avatar}</div>
+                            <div className="mb-6 relative w-24 h-24 mx-auto">
+                                <img
+                                    src={t.avatar}
+                                    alt={t.name}
+                                    className="w-full h-full object-cover rounded-full border-4 border-background shadow-xl"
+                                />
+                            </div>
                             <p className="text-2xl italic mb-4">&quot;{t.text}&quot;</p>
                             <div className="text-muted-foreground">
                                 <strong>{t.name}</strong> · 🔥 {t.streak} day streak

@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import ContractModal from "@/components/ContractModal";
 import GroupSettingsModal from "@/components/GroupSettingsModal";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,13 @@ function renderMarkdown(text: string): React.ReactNode {
     if (!text) return null;
     const lines = text.split('\n');
     return lines.map((line, lineIdx) => {
+        // Escape HTML to prevent XSS
         let processed = line
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+
+        processed = processed
             .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
             .replace(/__(.+?)__/g, '<u>$1</u>')
             .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
@@ -131,6 +138,11 @@ export default function GroupDetailPage() {
     const [pendingImages, setPendingImages] = useState<File[]>([]);
     const [currentCropIndex, setCurrentCropIndex] = useState(0);
     const cropContainerRef = useRef<HTMLDivElement>(null);
+
+    // Confirmation Dialog State
+    const [confirmPostDelete, setConfirmPostDelete] = useState(false);
+    const [postToDelete, setPostToDelete] = useState<string | null>(null);
+    const [confirmEndChallenge, setConfirmEndChallenge] = useState(false);
 
     useEffect(() => {
         async function fetchData() {
@@ -310,12 +322,25 @@ export default function GroupDetailPage() {
         setUploadedImages(prev => prev.filter((_, i) => i !== index));
     };
 
-    const handleDeletePost = async (postId: string) => {
-        if (!confirm("Delete this post?")) return;
+    const handleDeletePostClick = (postId: string) => {
+        setPostToDelete(postId);
+        setConfirmPostDelete(true);
+    };
+
+    const handleConfirmDeletePost = async () => {
+        if (!postToDelete) return;
         const prev = posts;
-        setPosts(p => p.filter(x => x.id !== postId));
-        try { await deletePost(postId, groupId); }
-        catch (e: any) { setPosts(prev); setToast({ message: e.message || "Failed to delete", type: "error" }); }
+        setPosts(p => p.filter(x => x.id !== postToDelete));
+        try {
+            await deletePost(postToDelete, groupId);
+            setToast({ message: "Post deleted", type: "warning" });
+        } catch (e: any) {
+            setPosts(prev);
+            setToast({ message: e.message || "Failed to delete", type: "error" });
+        } finally {
+            setConfirmPostDelete(false);
+            setPostToDelete(null);
+        }
     };
 
     const handleReaction = async (postId: string, emoji: string) => {
@@ -523,13 +548,7 @@ export default function GroupDetailPage() {
                                                 )}
                                                 {isOwner && (
                                                     <button
-                                                        onClick={async () => {
-                                                            if (confirm("End this challenge?")) {
-                                                                await clearGroupChallenge(groupId);
-                                                                const updated = await getGroup(groupId);
-                                                                setGroup(updated);
-                                                            }
-                                                        }}
+                                                        onClick={() => setConfirmEndChallenge(true)}
                                                         className="text-xs text-muted-foreground hover:text-foreground mt-2 cursor-pointer bg-transparent border-none p-0"
                                                     >
                                                         End challenge
@@ -839,7 +858,7 @@ export default function GroupDetailPage() {
                                                     </div>
                                                     {(userRole === "owner" || userRole === "moderator" || post.userId === group?.currentUserId) && (
                                                         <button
-                                                            onClick={() => handleDeletePost(post.id)}
+                                                            onClick={() => handleDeletePostClick(post.id)}
                                                             className="p-1.5 rounded text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                                                         >
                                                             <Trash2 size={14} />
@@ -1172,10 +1191,10 @@ export default function GroupDetailPage() {
                 isOpen={showSettingsModal}
                 onClose={() => setShowSettingsModal(false)}
                 groupId={groupId}
-                groupName={group?.name || ""}
-                groupDescription={group?.description || ""}
-                groupEmoji={group?.emoji || "🎯"}
-                groupIconUrl={group?.settings?.iconUrl || group?.theme?.iconUrl}
+                groupName={group?.name}
+                groupDescription={group?.description}
+                groupEmoji={group?.emoji}
+                groupIconUrl={group?.settings?.iconUrl}
                 groupRules={group?.rules || []}
                 groupManifesto={
                     typeof group?.group_dna === "string"
@@ -1183,8 +1202,38 @@ export default function GroupDetailPage() {
                         : group?.group_dna?.motto || group?.group_dna?.vibe || ""
                 }
                 isOwner={isOwner}
-                onGroupUpdated={async () => { const g = await getGroup(groupId); setGroup(g); }}
-                onGroupDeleted={() => router.push("/groups")}
+                onGroupUpdated={async () => {
+                    const updated = await getGroup(groupId);
+                    setGroup(updated);
+                }}
+                onGroupDeleted={() => {
+                    router.push("/groups");
+                }}
+            />
+
+            <ConfirmationDialog
+                open={confirmPostDelete}
+                onOpenChange={setConfirmPostDelete}
+                title="Delete Post"
+                description="Are you sure you want to delete this post? This cannot be undone."
+                confirmText="Delete"
+                variant="destructive"
+                onConfirm={handleConfirmDeletePost}
+            />
+
+            <ConfirmationDialog
+                open={confirmEndChallenge}
+                onOpenChange={setConfirmEndChallenge}
+                title="End Challenge"
+                description="Are you sure you want to end the current challenge? This will move it to history."
+                confirmText="End Challenge"
+                variant="default" // Non-destructive maybe? Or destructive if it deletes things? It clears it, so mostly neutral/action.
+                onConfirm={async () => {
+                    await clearGroupChallenge(groupId);
+                    const updated = await getGroup(groupId);
+                    setGroup(updated);
+                    setConfirmEndChallenge(false);
+                }}
             />
 
             {/* Image Cropper Modal */}

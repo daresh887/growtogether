@@ -14,9 +14,9 @@ import { Check, Loader2 } from "lucide-react";
 /* ──────────────────── DATA ──────────────────── */
 
 const testimonials = [
-    { name: "Sarah K.", avatar: "👩‍💼", text: "Finally finished my side project after 2 years of procrastinating!", streak: 47 },
-    { name: "Marcus T.", avatar: "👨‍🎨", text: "Lost 30 lbs because I couldn't let my group down.", streak: 89 },
-    { name: "Elena R.", avatar: "👩‍💻", text: "Learned Spanish in 6 months with daily check-ins.", streak: 156 },
+    { name: "Josh K.", avatar: "/images/avatars/josh.png", text: "Finally finished my side project after 2 years of procrastinating!", streak: 47 },
+    { name: "Marcus T.", avatar: "/images/avatars/alex.webp", text: "Lost 30 lbs because I couldn't let my group down.", streak: 89 },
+    { name: "Diana R.", avatar: "/images/avatars/diana.png", text: "Learned Spanish in 6 months with daily check-ins.", streak: 156 },
 ];
 
 const goalTypes = [
@@ -45,7 +45,7 @@ const interests = [
     { id: "writing", emoji: "✍️", label: "Writing" },
     { id: "music", emoji: "🎵", label: "Music" },
     { id: "hustling", emoji: "🚀", label: "Hustling" },
-    { id: "mindfulness", emoji: "🧘", label: "Wellness" },
+    { id: "mindfulness", emoji: "🧘", label: "Self Improvement" },
     { id: "languages", emoji: "🌍", label: "Languages" },
     { id: "reading", emoji: "📖", label: "Reading" },
     { id: "cooking", emoji: "🍳", label: "Cooking" },
@@ -88,14 +88,14 @@ const Container = ({ children }: { children: React.ReactNode }) => (
 function HumanWelcomeScreen({ onNext, userCount }: { onNext: () => void; userCount: number }) {
     return (
         <Container>
-            <div className="flex mb-6">
-                {["👩‍💼", "👨‍🎨", "👩‍💻", "👨‍🔬", "👩‍🎤"].map((avatar, i) => (
+            <div className="flex mb-6 pl-4">
+                {["/images/avatars/josh.png", "/images/avatars/alex.webp", "/images/avatars/diana.png", "/images/avatars/vladimir.png"].map((avatar, i) => (
                     <div
                         key={i}
-                        className="w-12 h-12 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xl animate-in fade-in duration-500"
-                        style={{ marginLeft: i > 0 ? "-12px" : "0", zIndex: 5 - i, animationDelay: `${i * 100}ms`, animationFillMode: "both" }}
+                        className="w-12 h-12 rounded-full border-2 border-background flex items-center justify-center overflow-hidden bg-muted"
+                        style={{ marginLeft: "-16px", zIndex: 5 - i, animationDelay: `${i * 100}ms`, animationFillMode: "both" }}
                     >
-                        {avatar}
+                        <img src={avatar} alt="User" className="w-full h-full object-cover" />
                     </div>
                 ))}
             </div>
@@ -300,7 +300,9 @@ function TestimonialScreen({ onNext }: { onNext: () => void }) {
                     <Card key={i} className={cn("animate-in fade-in duration-500", i === activeIndex ? "block" : "hidden")}>
                         <CardContent className="p-6">
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl">{t.avatar}</div>
+                                <div className="w-12 h-12 rounded-full border border-border overflow-hidden">
+                                    <img src={t.avatar} alt={t.name} className="w-full h-full object-cover" />
+                                </div>
                                 <div>
                                     <div className="font-semibold">{t.name}</div>
                                     <div className="text-xs text-green-500 font-medium">🔥 {t.streak} day streak</div>
@@ -398,7 +400,9 @@ function AppPreviewCheckInScreen({ onNext }: { onNext: () => void }) {
 
             <Card className="w-full mb-6">
                 <div className="flex items-center gap-3 p-4 border-b border-border">
-                    <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-xl">👨‍💻</div>
+                    <div className="w-10 h-10 rounded-full overflow-hidden">
+                        <img src="/images/avatars/vladimir.png" alt="Alex M." className="w-full h-full object-cover" />
+                    </div>
                     <div className="flex-1">
                         <div className="font-semibold text-sm">Alex M.</div>
                         <div className="text-xs text-muted-foreground">Just now • Day 12</div>
