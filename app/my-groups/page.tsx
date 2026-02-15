@@ -71,7 +71,7 @@ export default function MyGroupsPage() {
                         { label: "Avg. Streak", value: avgStreak, icon: Flame },
                         { label: "Owner Of", value: groups.filter(g => g.isOwner).length, icon: Crown },
                     ].map((stat) => (
-                        <Card key={stat.label}>
+                        <Card key={stat.label} className="py-0 gap-0">
                             <CardContent className="p-4 text-center">
                                 <stat.icon className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
                                 <div className="text-2xl font-bold">{stat.value}</div>

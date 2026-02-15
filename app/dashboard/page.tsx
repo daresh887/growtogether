@@ -142,7 +142,7 @@ export default function DashboardPage() {
                             icon: Zap,
                         },
                     ].map((stat) => (
-                        <Card key={stat.label}>
+                        <Card key={stat.label} className="py-0 gap-0">
                             <CardContent className="p-4 flex items-center gap-3">
                                 <div className="h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center">
                                     <stat.icon size={16} className="text-primary" />
