@@ -348,14 +348,10 @@ export async function leaveGroup(groupId: string) {
 export async function getLeaderboard(groupId: string) {
     const supabase = await createClient();
 
+    // Fetch members without FK join (avoids ambiguous FK issues)
     const { data: members, error } = await supabase
         .from("group_members")
-        .select(`
-            user_id,
-            streak_count,
-            last_posted_at,
-            profiles!inner(display_name, avatar_url, avatar)
-        `)
+        .select("user_id, streak_count, last_posted_at")
         .eq("group_id", groupId)
         .order("streak_count", { ascending: false })
         .limit(10);
@@ -365,9 +361,24 @@ export async function getLeaderboard(groupId: string) {
         return [];
     }
 
+    if (!members || members.length === 0) return [];
+
+    // Fetch profiles separately
+    const userIds = members.map((m: any) => m.user_id);
+    const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url, avatar")
+        .in("id", userIds);
+
+    const profileMap = new Map<string, any>();
+    if (profiles) {
+        for (const p of profiles) {
+            profileMap.set(p.id, p);
+        }
+    }
+
     const membersWithCounts = await Promise.all(members.map(async (m: any) => {
-        // Handle potential array response for 1:1 relation
-        const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+        const profile = profileMap.get(m.user_id);
 
         // Fetch total posts count for this user in this group
         const { count } = await supabase
@@ -785,15 +796,10 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
         throw new Error("Group not found");
     }
 
+    // Fetch members without relying on FK join (which can fail if FK is missing/ambiguous)
     const { data: members, error } = await supabase
         .from("group_members")
-        .select(`
-            user_id,
-            role,
-            streak_count,
-            created_at,
-            profiles!inner(display_name, avatar_url, avatar)
-        `)
+        .select("user_id, role, streak_count, created_at")
         .eq("group_id", groupId)
         .order("created_at", { ascending: true });
 
@@ -802,15 +808,36 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
         return [];
     }
 
-    return members.map((m: any) => ({
-        userId: m.user_id,
-        displayName: m.profiles?.display_name || "User",
-        avatarUrl: m.profiles?.avatar_url || null,
-        userEmoji: m.profiles?.avatar || "🧑‍💻",
-        role: m.user_id === group.created_by ? "owner" : (m.role === "moderator" ? "moderator" : "member"),
-        streak: m.streak_count || 0,
-        joinedAt: m.created_at,
-    }));
+    if (!members || members.length === 0) {
+        return [];
+    }
+
+    // Fetch profiles separately
+    const userIds = members.map((m: any) => m.user_id);
+    const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url, avatar")
+        .in("id", userIds);
+
+    const profileMap = new Map<string, any>();
+    if (profiles) {
+        for (const p of profiles) {
+            profileMap.set(p.id, p);
+        }
+    }
+
+    return members.map((m: any) => {
+        const profile = profileMap.get(m.user_id);
+        return {
+            userId: m.user_id,
+            displayName: profile?.display_name || "User",
+            avatarUrl: profile?.avatar_url || null,
+            userEmoji: profile?.avatar || "🧑‍💻",
+            role: m.user_id === group.created_by ? "owner" : (m.role === "moderator" ? "moderator" : "member"),
+            streak: m.streak_count || 0,
+            joinedAt: m.created_at,
+        };
+    });
 }
 
 /**
