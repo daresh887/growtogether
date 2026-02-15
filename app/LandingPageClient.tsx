@@ -97,7 +97,7 @@ function HeroSection({ userCount }: { userCount: number }) {
             {/* Main headline */}
             <h1 className="text-[clamp(36px,8vw,72px)] font-extrabold leading-[1.1] tracking-tight mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
                 Stop quitting.<br />
-                <span className="bg-gradient-to-br from-primary to-green-400 bg-clip-text text-transparent">
+                <span className="text-primary">
                     Start finishing.
                 </span>
             </h1>
@@ -269,7 +269,7 @@ function AppPreviewSection() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Card>
                                         <CardContent className="py-8 text-center">
-                                            <div className="text-5xl font-extrabold bg-gradient-to-br from-primary to-green-400 bg-clip-text text-transparent mb-2">
+                                            <div className="text-5xl font-extrabold text-primary mb-2">
                                                 <AnimatedCounter target={23} />
                                             </div>
                                             <div className="text-muted-foreground font-medium">🔥 Day Streak</div>

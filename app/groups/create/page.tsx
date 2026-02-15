@@ -594,7 +594,7 @@ export default function CreateGroupPage() {
                                     Continue <ArrowRight size={14} className="ml-1" />
                                 </Button>
                             ) : (
-                                <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
+                                <Button onClick={handleSubmit} disabled={isSubmitting}>
                                     {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Creating...</> : <><Rocket size={14} className="mr-1" /> Create Group</>}
                                 </Button>
                             )}

@@ -144,8 +144,6 @@ export default function TutorialPage() {
                                     </div>
                                     <Button
                                         size="sm"
-                                        variant={hasJoinedGroup ? "default" : "default"}
-                                        className={cn(hasJoinedGroup && "bg-green-600 hover:bg-green-700")}
                                     >
                                         {hasJoinedGroup ? <><Check size={12} className="mr-1" /> Joined!</> : <>Join <ArrowRight size={12} className="ml-1" /></>}
                                     </Button>
@@ -185,7 +183,7 @@ export default function TutorialPage() {
                                     />
                                 </div>
                                 <Button
-                                    className={cn("w-full", hasPosted && "bg-green-600 hover:bg-green-700")}
+                                    className="w-full"
                                     onClick={handlePost}
                                     disabled={mockPostText.trim().length === 0 || hasPosted}
                                 >

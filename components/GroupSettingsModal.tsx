@@ -372,7 +372,7 @@ export default function GroupSettingsModal({
                             <Separator />
 
                             {/* Save Button */}
-                            <Button onClick={handleSaveGroup} disabled={saving} className="w-full bg-green-600 hover:bg-green-700">
+                            <Button onClick={handleSaveGroup} disabled={saving} className="w-full">
                                 {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Saving...</> : "Save Changes"}
                             </Button>
                         </div>

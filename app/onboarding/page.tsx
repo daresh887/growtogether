@@ -437,7 +437,7 @@ function AppPreviewStreakScreen({ onNext }: { onNext: () => void }) {
 
             <Card className="w-full mb-4 text-center">
                 <CardContent className="p-6">
-                    <div className="text-7xl font-extrabold bg-gradient-to-br from-primary to-green-500 bg-clip-text text-transparent mb-2">23</div>
+                    <div className="text-7xl font-extrabold text-primary mb-2">23</div>
                     <div className="text-muted-foreground font-medium">🔥 Day Streak</div>
                 </CardContent>
             </Card>

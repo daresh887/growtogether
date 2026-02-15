@@ -194,7 +194,7 @@ export default function ContractModal({
             {showWelcome && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-[10001] animate-in fade-in duration-500">
                     <div className="text-[120px] mb-6 animate-bounce">{groupEmoji}</div>
-                    <h1 className="text-5xl font-extrabold bg-gradient-to-br from-foreground to-primary bg-clip-text text-transparent mb-4 text-center">
+                    <h1 className="text-5xl font-extrabold text-primary mb-4 text-center">
                         Welcome to {groupName}!
                     </h1>
                     <p className="text-xl text-muted-foreground">You&apos;re officially committed 🔥</p>
@@ -207,7 +207,7 @@ export default function ContractModal({
                     {/* Header */}
                     <div className="p-8 pb-6 border-b border-border text-center">
                         <div className="text-6xl mb-4">{groupEmoji}</div>
-                        <h2 className="text-2xl font-extrabold bg-gradient-to-br from-foreground to-primary bg-clip-text text-transparent mb-2">
+                        <h2 className="text-2xl font-extrabold text-primary mb-2">
                             Commitment Contract
                         </h2>
                         <p className="text-sm text-muted-foreground">By signing below, you agree to hold yourself accountable</p>
@@ -268,7 +268,7 @@ export default function ContractModal({
                         <Button
                             onClick={handleSign}
                             disabled={!hasSignature || isSigning}
-                            className={cn("w-full h-14 text-lg font-extrabold rounded-2xl", hasSignature && "bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/30")}
+                            className={cn("w-full h-14 text-lg font-extrabold rounded-2xl", !hasSignature && "opacity-50")}
                         >
                             {isSigning ? (
                                 <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Sealing your commitment...</>
