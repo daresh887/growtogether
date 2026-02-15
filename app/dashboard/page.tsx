@@ -5,9 +5,30 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/client";
-import { getProfile, getUserStats, getUserGroups, getActivityFeed, type UserStats, type UserGroup, type ActivityItem, type ProfileData } from "@/app/actions/profile";
-
-import { colors } from "@/utils/design-tokens";
+import {
+    getProfile,
+    getUserStats,
+    getUserGroups,
+    getActivityFeed,
+    type UserStats,
+    type UserGroup,
+    type ActivityItem,
+    type ProfileData,
+} from "@/app/actions/profile";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+    Flame,
+    FileText,
+    Users,
+    Zap,
+    Search,
+    Plus,
+    FolderOpen,
+    ArrowRight,
+    Loader2,
+} from "lucide-react";
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -25,9 +46,10 @@ export default function DashboardPage() {
 
     const loadDashboardData = async () => {
         try {
-            // Check profile and tutorial completion
             const supabase = createClient();
-            const { data: { user } } = await supabase.auth.getUser();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
             if (user) {
                 const metadata = user.user_metadata || {};
                 if (!metadata.profile_complete) {
@@ -40,12 +62,13 @@ export default function DashboardPage() {
                 }
             }
 
-            const [profileData, statsData, groupsData, activityData] = await Promise.all([
-                getProfile(),
-                getUserStats(),
-                getUserGroups(),
-                getActivityFeed(5),
-            ]);
+            const [profileData, statsData, groupsData, activityData] =
+                await Promise.all([
+                    getProfile(),
+                    getUserStats(),
+                    getUserGroups(),
+                    getActivityFeed(5),
+                ]);
 
             if (!profileData) {
                 router.push("/login");
@@ -65,497 +88,200 @@ export default function DashboardPage() {
 
     if (!mounted || loading) {
         return (
-            <div style={{
-                minHeight: "100vh",
-                background: colors.bg,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: colors.text,
-            }}>
-                <div style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "16px"
-                }}>
-                    <div style={{
-                        width: "48px",
-                        height: "48px",
-                        border: `3px solid ${colors.border}`,
-                        borderTopColor: colors.primary,
-                        borderRadius: "50%",
-                        animation: "spin 1s linear infinite",
-                    }} />
-                    <span style={{ color: colors.textMuted }}>Loading dashboard...</span>
-                </div>
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
         );
     }
 
-    const displayName = profile?.display_name || profile?.username || "there";
+    const displayName =
+        profile?.display_name || profile?.username || "there";
 
     return (
-        <div style={{
-            minHeight: "100vh",
-            background: colors.bg,
-            color: colors.text,
-            fontFamily: "var(--font-inter), Inter, sans-serif",
-            position: "relative",
-            overflow: "hidden",
-        }}>
-            {/* Gradient mesh background */}
-            <div style={{
-                position: "absolute",
-                top: "-200px",
-                right: "-200px",
-                width: "600px",
-                height: "600px",
-                background: `radial-gradient(circle, rgba(108, 92, 231, 0.15) 0%, transparent 70%)`,
-                pointerEvents: "none",
-            }} />
-            <div style={{
-                position: "absolute",
-                bottom: "-100px",
-                left: "-100px",
-                width: "400px",
-                height: "400px",
-                background: `radial-gradient(circle, rgba(0, 217, 165, 0.1) 0%, transparent 70%)`,
-                pointerEvents: "none",
-            }} />
-
+        <div className="min-h-screen bg-background">
             <Navbar />
 
-            {/* Main Content */}
-            <div style={{
-                maxWidth: "1200px",
-                margin: "0 auto",
-                padding: "32px 24px 120px",
-                paddingLeft: "88px", // Account for desktop navbar
-            }}>
-                {/* Welcome Hero */}
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr auto",
-                    gap: "24px",
-                    marginBottom: "32px",
-                }}>
-                    <div style={{
-                        background: `linear-gradient(135deg, ${colors.surface} 0%, rgba(108, 92, 231, 0.1) 100%)`,
-                        border: `1px solid ${colors.border}`,
-                        borderRadius: "24px",
-                        padding: "32px",
-                        position: "relative",
-                        overflow: "hidden",
-                    }}>
-                        <div style={{
-                            position: "absolute",
-                            top: "20px",
-                            right: "20px",
-                            fontSize: "80px",
-                            opacity: 0.1,
-                        }}>
-                            👋
-                        </div>
-                        <div style={{ position: "relative", zIndex: 1 }}>
-                            <p style={{ color: colors.textMuted, fontSize: "14px", marginBottom: "4px" }}>
-                                Welcome back,
-                            </p>
-                            <h1 style={{
-                                fontSize: "36px",
-                                fontWeight: 800,
-                                marginBottom: "8px",
-                                background: `linear-gradient(135deg, ${colors.textPrimary}, ${colors.primaryLight})`,
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                                backgroundClip: "text",
-                            }}>
-                                {displayName}! 🌟
-                            </h1>
-                            <p style={{ color: colors.textSecondary, fontSize: "16px" }}>
-                                {stats && stats.currentStreak > 0 ? (
-                                    <>You're on a <span style={{ color: colors.accent, fontWeight: 700 }}>{stats.currentStreak}-day streak</span>. Keep it up!</>
-                                ) : (
-                                    <>Start your accountability journey today!</>
-                                )}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Streak Card */}
-                    <div style={{
-                        background: colors.surface,
-                        border: `1px solid ${colors.border}`,
-                        borderRadius: "24px",
-                        padding: "24px 32px",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        minWidth: "160px",
-                    }}>
-                        <div style={{
-                            fontSize: "48px",
-                            marginBottom: "4px",
-                            animation: "pulse 2s infinite",
-                        }}>
-                            🔥
-                        </div>
-                        <div style={{
-                            fontSize: "32px",
-                            fontWeight: 800,
-                            color: colors.accent,
-                        }}>
-                            {stats?.currentStreak || 0}
-                        </div>
-                        <div style={{ fontSize: "13px", color: colors.textMuted }}>
-                            day streak
-                        </div>
-                    </div>
+            <main className="max-w-4xl mx-auto px-4 py-8 pb-28 lg:pl-24">
+                {/* Header */}
+                <div className="mb-8">
+                    <p className="text-sm text-muted-foreground mb-1">Welcome back,</p>
+                    <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
+                    {stats && stats.currentStreak > 0 && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                            You're on a{" "}
+                            <span className="text-foreground font-medium">
+                                {stats.currentStreak}-day streak
+                            </span>
+                            . Keep it up.
+                        </p>
+                    )}
                 </div>
 
-                {/* Quick Stats */}
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "16px",
-                    marginBottom: "32px",
-                }}>
+                {/* Stats Row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
                     {[
-                        { label: "Total Posts", value: stats?.totalPosts || 0, icon: "📝", color: colors.primary },
-                        { label: "Groups Joined", value: stats?.groupsJoined || 0, icon: "👥", color: colors.accent },
-                        { label: "Level", value: stats?.level || 1, icon: "⚡", color: "#FFD93D" },
+                        {
+                            label: "Streak",
+                            value: stats?.currentStreak || 0,
+                            icon: Flame,
+                            suffix: "d",
+                        },
+                        {
+                            label: "Posts",
+                            value: stats?.totalPosts || 0,
+                            icon: FileText,
+                        },
+                        {
+                            label: "Groups",
+                            value: stats?.groupsJoined || 0,
+                            icon: Users,
+                        },
+                        {
+                            label: "Level",
+                            value: stats?.level || 1,
+                            icon: Zap,
+                        },
                     ].map((stat) => (
-                        <div
-                            key={stat.label}
-                            style={{
-                                background: colors.surface,
-                                border: `1px solid ${colors.border}`,
-                                borderRadius: "16px",
-                                padding: "20px",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "16px",
-                            }}
-                        >
-                            <div style={{
-                                width: "48px",
-                                height: "48px",
-                                borderRadius: "12px",
-                                background: `${stat.color}15`,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: "24px",
-                            }}>
-                                {stat.icon}
-                            </div>
-                            <div>
-                                <div style={{ fontSize: "24px", fontWeight: 700 }}>{stat.value}</div>
-                                <div style={{ fontSize: "13px", color: colors.textMuted }}>{stat.label}</div>
-                            </div>
-                        </div>
+                        <Card key={stat.label}>
+                            <CardContent className="p-4 flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center">
+                                    <stat.icon size={16} className="text-muted-foreground" />
+                                </div>
+                                <div>
+                                    <p className="text-xl font-semibold leading-none">
+                                        {stat.value}
+                                        {stat.suffix && (
+                                            <span className="text-xs text-muted-foreground ml-0.5">
+                                                {stat.suffix}
+                                            </span>
+                                        )}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        {stat.label}
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
                     ))}
                 </div>
 
-                {/* Action Cards - Bento Style */}
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "16px",
-                    marginBottom: "32px",
-                }}>
-                    <Link
-                        href="/groups"
-                        style={{
-                            background: `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`,
-                            borderRadius: "20px",
-                            padding: "28px",
-                            textDecoration: "none",
-                            color: "#fff",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "12px",
-                            transition: "transform 0.3s, box-shadow 0.3s",
-                            boxShadow: "0 8px 32px rgba(108, 92, 231, 0.3)",
-                        }}
-                    >
-                        <div style={{ fontSize: "36px" }}>🔍</div>
-                        <div>
-                            <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "4px" }}>Explore Groups</div>
-                            <div style={{ fontSize: "13px", opacity: 0.9 }}>Find your tribe</div>
-                        </div>
-                        <div style={{ fontSize: "20px", marginTop: "auto" }}>→</div>
-                    </Link>
-
-                    <Link
-                        href="/groups/create"
-                        style={{
-                            background: colors.surface,
-                            border: `1px solid ${colors.border}`,
-                            borderRadius: "20px",
-                            padding: "28px",
-                            textDecoration: "none",
-                            color: colors.textPrimary,
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "12px",
-                            transition: "transform 0.3s, background 0.3s",
-                        }}
-                    >
-                        <div style={{ fontSize: "36px" }}>✨</div>
-                        <div>
-                            <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "4px" }}>Create Group</div>
-                            <div style={{ fontSize: "13px", color: colors.textSecondary }}>Start something new</div>
-                        </div>
-                        <div style={{ fontSize: "20px", marginTop: "auto", color: colors.textMuted }}>→</div>
-                    </Link>
-
-                    <Link
-                        href="/my-groups"
-                        style={{
-                            background: colors.surface,
-                            border: `1px solid ${colors.border}`,
-                            borderRadius: "20px",
-                            padding: "28px",
-                            textDecoration: "none",
-                            color: colors.textPrimary,
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "12px",
-                            transition: "transform 0.3s, background 0.3s",
-                        }}
-                    >
-                        <div style={{ fontSize: "36px" }}>📋</div>
-                        <div>
-                            <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "4px" }}>My Groups</div>
-                            <div style={{ fontSize: "13px", color: colors.textSecondary }}>View your groups</div>
-                        </div>
-                        <div style={{ fontSize: "20px", marginTop: "auto", color: colors.textMuted }}>→</div>
-                    </Link>
+                {/* Quick Actions */}
+                <div className="grid grid-cols-3 gap-3 mb-8">
+                    <Button variant="secondary" className="h-auto py-4 flex-col gap-1" asChild>
+                        <Link href="/groups">
+                            <Search size={18} />
+                            <span className="text-xs font-medium">Explore</span>
+                        </Link>
+                    </Button>
+                    <Button variant="secondary" className="h-auto py-4 flex-col gap-1" asChild>
+                        <Link href="/groups/create">
+                            <Plus size={18} />
+                            <span className="text-xs font-medium">Create</span>
+                        </Link>
+                    </Button>
+                    <Button variant="secondary" className="h-auto py-4 flex-col gap-1" asChild>
+                        <Link href="/my-groups">
+                            <FolderOpen size={18} />
+                            <span className="text-xs font-medium">My Groups</span>
+                        </Link>
+                    </Button>
                 </div>
 
                 {/* Two Column Layout */}
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "24px",
-                }}>
+                <div className="grid md:grid-cols-2 gap-4">
                     {/* Your Groups */}
-                    <div style={{
-                        background: colors.surface,
-                        border: `1px solid ${colors.border}`,
-                        borderRadius: "20px",
-                        padding: "24px",
-                    }}>
-                        <div style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: "20px",
-                        }}>
-                            <h2 style={{ fontSize: "18px", fontWeight: 700 }}>Your Groups</h2>
-                            <Link href="/my-groups" style={{ color: colors.primary, fontSize: "14px", textDecoration: "none" }}>
-                                See all →
-                            </Link>
-                        </div>
-
-                        {groups.length === 0 ? (
-                            <div style={{
-                                textAlign: "center",
-                                padding: "32px 16px",
-                                color: colors.textMuted,
-                            }}>
-                                <div style={{ fontSize: "36px", marginBottom: "12px" }}>👥</div>
-                                <p style={{ marginBottom: "16px" }}>You haven't joined any groups yet</p>
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-base">Your Groups</CardTitle>
                                 <Link
-                                    href="/groups"
-                                    style={{
-                                        padding: "10px 20px",
-                                        borderRadius: "10px",
-                                        background: colors.primary,
-                                        color: "#fff",
-                                        textDecoration: "none",
-                                        fontSize: "14px",
-                                        fontWeight: 600,
-                                    }}
+                                    href="/my-groups"
+                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                                 >
-                                    Explore Groups
+                                    See all <ArrowRight size={12} />
                                 </Link>
                             </div>
-                        ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                {groups.slice(0, 3).map((group) => (
-                                    <Link
-                                        key={group.id}
-                                        href={`/groups/${group.id}`}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "14px",
-                                            padding: "14px",
-                                            background: colors.bg,
-                                            borderRadius: "14px",
-                                            textDecoration: "none",
-                                            color: colors.textPrimary,
-                                            transition: "background 0.2s",
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: "48px",
-                                            height: "48px",
-                                            borderRadius: "12px",
-                                            background: `linear-gradient(135deg, ${colors.primary}20, ${colors.primaryLight}20)`,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            fontSize: "24px",
-                                        }}>
-                                            {group.emoji}
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: 600, marginBottom: "2px" }}>{group.name}</div>
-                                            <div style={{ fontSize: "12px", color: colors.textMuted }}>
-                                                {group.memberCount} members • {group.lastActive}
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                            {groups.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    <Users className="mx-auto h-8 w-8 mb-3 opacity-50" />
+                                    <p className="text-sm mb-3">No groups yet</p>
+                                    <Button size="sm" asChild>
+                                        <Link href="/groups">Explore Groups</Link>
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {groups.slice(0, 3).map((group) => (
+                                        <Link
+                                            key={group.id}
+                                            href={`/groups/${group.id}`}
+                                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                                        >
+                                            <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center text-lg">
+                                                {group.emoji}
                                             </div>
-                                        </div>
-                                        <div style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "4px",
-                                            padding: "6px 10px",
-                                            background: `${colors.accent}20`,
-                                            borderRadius: "20px",
-                                            fontSize: "13px",
-                                            fontWeight: 600,
-                                            color: colors.accent,
-                                        }}>
-                                            🔥 {group.yourStreak}
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium truncate">
+                                                    {group.name}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {group.memberCount} members
+                                                </p>
+                                            </div>
+                                            {group.yourStreak > 0 && (
+                                                <Badge variant="secondary" className="text-xs">
+                                                    {group.yourStreak}d streak
+                                                </Badge>
+                                            )}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
 
                     {/* Activity Feed */}
-                    <div style={{
-                        background: colors.surface,
-                        border: `1px solid ${colors.border}`,
-                        borderRadius: "20px",
-                        padding: "24px",
-                    }}>
-                        <div style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: "20px",
-                        }}>
-                            <h2 style={{ fontSize: "18px", fontWeight: 700 }}>Activity</h2>
-                            <div style={{
-                                width: "8px",
-                                height: "8px",
-                                borderRadius: "50%",
-                                background: colors.accent,
-                                animation: "pulse 2s infinite",
-                            }} />
-                        </div>
-
-                        {activity.length === 0 ? (
-                            <div style={{
-                                textAlign: "center",
-                                padding: "32px 16px",
-                                color: colors.textMuted,
-                            }}>
-                                <div style={{ fontSize: "36px", marginBottom: "12px" }}>📭</div>
-                                <p>No recent activity in your groups</p>
-                            </div>
-                        ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                {activity.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "flex-start",
-                                            gap: "12px",
-                                            padding: "12px",
-                                            background: colors.bg,
-                                            borderRadius: "12px",
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: "36px",
-                                            height: "36px",
-                                            borderRadius: "10px",
-                                            background: `${colors.primary}20`,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            fontSize: "18px",
-                                            flexShrink: 0,
-                                        }}>
-                                            {item.emoji}
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: "14px", marginBottom: "2px" }}>
-                                                <span style={{ fontWeight: 600 }}>{item.user}</span>
-                                                {" "}
-                                                <span style={{ color: colors.textSecondary }}>{item.content}</span>
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Activity</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                            {activity.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    <FileText className="mx-auto h-8 w-8 mb-3 opacity-50" />
+                                    <p className="text-sm">No recent activity</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {activity.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className="flex items-start gap-3 p-3 rounded-lg bg-muted/30"
+                                        >
+                                            <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center text-sm shrink-0">
+                                                {item.emoji}
                                             </div>
-                                            <div style={{ fontSize: "12px", color: colors.textMuted }}>
-                                                {item.group} • {item.time}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm">
+                                                    <span className="font-medium">{item.user}</span>{" "}
+                                                    <span className="text-muted-foreground">
+                                                        {item.content}
+                                                    </span>
+                                                </p>
+                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                    {item.group} · {item.time}
+                                                </p>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
-            </div>
-
-            {/* Floating Quick Post Button */}
-            <button
-                onClick={() => router.push("/groups")}
-                style={{
-                    position: "fixed",
-                    bottom: "100px",
-                    right: "32px",
-                    width: "60px",
-                    height: "60px",
-                    borderRadius: "50%",
-                    border: "none",
-                    background: `linear-gradient(135deg, ${colors.accent}, #00B894)`,
-                    color: "#fff",
-                    fontSize: "24px",
-                    boxShadow: "0 8px 24px rgba(0, 217, 165, 0.4)",
-                    cursor: "pointer",
-                    transition: "transform 0.2s",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 100,
-                }}
-            >
-                ✏️
-            </button>
-
-            <style jsx global>{`
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; transform: scale(1); }
-                    50% { opacity: 0.8; transform: scale(1.05); }
-                }
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                @media (max-width: 1023px) {
-                    .dashboard-content {
-                        padding-left: 24px !important;
-                    }
-                }
-            `}</style>
+            </main>
         </div>
     );
 }

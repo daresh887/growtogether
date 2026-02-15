@@ -4,30 +4,19 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { Check, Loader2 } from "lucide-react";
 
-// ============================================
-// ONBOARDING DATA
-// ============================================
+/* ──────────────────── DATA ──────────────────── */
 
 const testimonials = [
-    {
-        name: "Sarah K.",
-        avatar: "👩‍💼",
-        text: "Finally finished my side project after 2 years of procrastinating!",
-        streak: 47,
-    },
-    {
-        name: "Marcus T.",
-        avatar: "👨‍🎨",
-        text: "Lost 30 lbs because I couldn't let my group down.",
-        streak: 89,
-    },
-    {
-        name: "Elena R.",
-        avatar: "👩‍💻",
-        text: "Learned Spanish in 6 months with daily check-ins.",
-        streak: 156,
-    },
+    { name: "Sarah K.", avatar: "👩‍💼", text: "Finally finished my side project after 2 years of procrastinating!", streak: 47 },
+    { name: "Marcus T.", avatar: "👨‍🎨", text: "Lost 30 lbs because I couldn't let my group down.", streak: 89 },
+    { name: "Elena R.", avatar: "👩‍💻", text: "Learned Spanish in 6 months with daily check-ins.", streak: 156 },
 ];
 
 const goalTypes = [
@@ -63,225 +52,70 @@ const interests = [
     { id: "other", emoji: "✨", label: "Other" },
 ];
 
-// Sample group data for preview
 const sampleGroups = [
     { name: "Morning Runners", emoji: "🏃", members: 24, streak: "🔥 Active" },
     { name: "Code Every Day", emoji: "💻", members: 156, streak: "🔥 Active" },
     { name: "Learn Spanish", emoji: "🇪🇸", members: 89, streak: "🔥 Active" },
 ];
 
-// ============================================
-// STYLES
-// ============================================
-
-const colors = {
-    bg: "#0A0A0B",
-    surface: "#141416",
-    surfaceHover: "#1A1A1E",
-    border: "#2A2A2E",
-    borderActive: "#6C5CE7",
-    primary: "#6C5CE7",
-    primaryLight: "#A29BFE",
-    accent: "#00D9A5",
-    warning: "#FFEAA7",
-    textPrimary: "#FFFFFF",
-    textSecondary: "#B8B8C0",
-    textMuted: "#6B6B74",
-};
-
-const baseStyles = {
-    page: {
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column" as const,
-        background: colors.bg,
-        fontFamily: "var(--font-inter), Inter, -apple-system, sans-serif",
-        color: colors.textPrimary,
-    },
-    container: {
-        flex: 1,
-        display: "flex",
-        flexDirection: "column" as const,
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-        maxWidth: "480px",
-        margin: "0 auto",
-        width: "100%",
-    },
-    title: {
-        fontSize: "28px",
-        fontWeight: 700,
-        marginBottom: "12px",
-        textAlign: "center" as const,
-        lineHeight: 1.2,
-        letterSpacing: "-0.5px",
-    },
-    subtitle: {
-        fontSize: "16px",
-        color: colors.textSecondary,
-        textAlign: "center" as const,
-        lineHeight: 1.5,
-        marginBottom: "32px",
-    },
-    button: {
-        width: "100%",
-        padding: "16px 32px",
-        borderRadius: "12px",
-        border: "none",
-        fontWeight: 600,
-        fontSize: "16px",
-        cursor: "pointer",
-        transition: "all 0.2s ease",
-        fontFamily: "inherit",
-    },
-};
-
-// ============================================
-// COMPONENTS
-// ============================================
+/* ──────────────────── SHARED ──────────────────── */
 
 function ProgressBar({ current, total }: { current: number; total: number }) {
     return (
-        <div style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "3px",
-            background: colors.border,
-            zIndex: 100,
-        }}>
-            <div style={{
-                height: "100%",
-                width: `${((current + 1) / total) * 100}%`,
-                background: `linear-gradient(90deg, ${colors.primary}, ${colors.primaryLight})`,
-                transition: "width 0.4s ease",
-                borderRadius: "0 3px 3px 0",
-            }} />
+        <div className="fixed top-0 left-0 right-0 h-[3px] bg-border z-50">
+            <div
+                className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-r-full transition-[width] duration-400"
+                style={{ width: `${((current + 1) / total) * 100}%` }}
+            />
         </div>
     );
 }
 
-function ContinueButton({
-    onClick,
-    disabled = false,
-    label = "Continue"
-}: {
-    onClick: () => void;
-    disabled?: boolean;
-    label?: string;
-}) {
-    const [hover, setHover] = useState(false);
-
+function ContinueButton({ onClick, disabled = false, label = "Continue" }: { onClick: () => void; disabled?: boolean; label?: string }) {
     return (
-        <button
-            onClick={onClick}
-            disabled={disabled}
-            onMouseEnter={() => setHover(true)}
-            onMouseLeave={() => setHover(false)}
-            style={{
-                ...baseStyles.button,
-                background: disabled
-                    ? colors.border
-                    : hover
-                        ? `linear-gradient(135deg, #5B4BD6, ${colors.primary})`
-                        : `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`,
-                color: disabled ? colors.textMuted : "#fff",
-                cursor: disabled ? "not-allowed" : "pointer",
-                transform: !disabled && hover ? "translateY(-2px)" : "none",
-                boxShadow: !disabled && hover
-                    ? `0 8px 24px rgba(108, 92, 231, 0.4)`
-                    : "none",
-            }}
-        >
+        <Button onClick={onClick} disabled={disabled} size="lg" className="w-full h-14 text-base font-semibold rounded-xl">
             {label}
-        </button>
+        </Button>
     );
 }
 
-// ============================================
-// SCREEN COMPONENTS
-// ============================================
+const Container = ({ children }: { children: React.ReactNode }) => (
+    <div className="flex-1 flex flex-col items-center justify-center px-6 max-w-md mx-auto w-full">{children}</div>
+);
+
+/* ──────────────────── SCREENS ──────────────────── */
 
 function HumanWelcomeScreen({ onNext, userCount }: { onNext: () => void; userCount: number }) {
     return (
-        <div style={baseStyles.container}>
-            {/* Friendly avatars */}
-            <div style={{
-                display: "flex",
-                gap: "-8px",
-                marginBottom: "24px",
-            }}>
+        <Container>
+            <div className="flex mb-6">
                 {["👩‍💼", "👨‍🎨", "👩‍💻", "👨‍🔬", "👩‍🎤"].map((avatar, i) => (
                     <div
                         key={i}
-                        style={{
-                            width: "48px",
-                            height: "48px",
-                            borderRadius: "50%",
-                            background: colors.surface,
-                            border: `2px solid ${colors.bg}`,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "24px",
-                            marginLeft: i > 0 ? "-12px" : "0",
-                            zIndex: 5 - i,
-                            animation: `fadeIn 0.5s ease ${i * 0.1}s both`,
-                        }}
+                        className="w-12 h-12 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xl animate-in fade-in duration-500"
+                        style={{ marginLeft: i > 0 ? "-12px" : "0", zIndex: 5 - i, animationDelay: `${i * 100}ms`, animationFillMode: "both" }}
                     >
                         {avatar}
                     </div>
                 ))}
             </div>
-
-            <h1 style={baseStyles.title}>
+            <h1 className="text-2xl font-bold text-center mb-3 leading-tight tracking-tight">
                 Join {userCount.toLocaleString()} people who<br />actually follow through
             </h1>
-
-            <p style={{ ...baseStyles.subtitle, marginBottom: "20px" }}>
-                Real humans, real goals, real accountability.<br />
-                No bots. No fake motivation.
-            </p>
-
-            {/* Trust badge */}
-            <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "32px",
-                padding: "10px 16px",
-                background: `${colors.accent}15`,
-                borderRadius: "24px",
-                border: `1px solid ${colors.accent}30`,
-            }}>
-                <span style={{ color: colors.accent }}>✓</span>
-                <span style={{ fontSize: "14px", color: colors.accent, fontWeight: 500 }}>
-                    Average streak: 23 days
-                </span>
-            </div>
-
+            <p className="text-muted-foreground text-center mb-5 leading-relaxed">Real humans, real goals, real accountability.<br />No bots. No fake motivation.</p>
+            <Badge variant="outline" className="mb-8 text-green-500 border-green-500/30 bg-green-500/10">
+                <Check size={14} className="mr-1" /> Average streak: 23 days
+            </Badge>
             <ContinueButton onClick={onNext} label="See how it works →" />
-        </div>
+        </Container>
     );
 }
 
-// Interactive Draggable Slider Screen
-function DraggableSliderScreen({
-    onNext,
-    value,
-    onChange
-}: {
-    onNext: () => void;
-    value: number;
-    onChange: (v: number) => void;
-}) {
+function DraggableSliderScreen({ onNext, value, onChange }: { onNext: () => void; value: number; onChange: (v: number) => void }) {
     const sliderRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const emojis = ["😰", "😟", "😐", "🙂", "😊"];
-    const emojiIndex = Math.min(Math.floor(value / 20), 4);
-    const currentEmoji = emojis[emojiIndex];
+    const currentEmoji = emojis[Math.min(Math.floor(value / 20), 4)];
 
     const updateValue = useCallback((clientX: number) => {
         if (!sliderRef.current) return;
@@ -290,33 +124,21 @@ function DraggableSliderScreen({
         onChange(Math.round((x / rect.width) * 100));
     }, [onChange]);
 
-    const handleMouseDown = (e: React.MouseEvent) => {
-        setIsDragging(true);
-        updateValue(e.clientX);
-    };
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-        setIsDragging(true);
-        updateValue(e.touches[0].clientX);
-    };
+    const handleMouseDown = (e: React.MouseEvent) => { setIsDragging(true); updateValue(e.clientX); };
+    const handleTouchStart = (e: React.TouchEvent) => { setIsDragging(true); updateValue(e.touches[0].clientX); };
 
     useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (isDragging) updateValue(e.clientX);
-        };
-        const handleTouchMove = (e: TouchEvent) => {
-            if (isDragging) updateValue(e.touches[0].clientX);
-        };
+        const handleMove = (e: MouseEvent) => { if (isDragging) updateValue(e.clientX); };
+        const handleTouchMove = (e: TouchEvent) => { if (isDragging) updateValue(e.touches[0].clientX); };
         const handleEnd = () => setIsDragging(false);
-
         if (isDragging) {
-            document.addEventListener("mousemove", handleMouseMove);
+            document.addEventListener("mousemove", handleMove);
             document.addEventListener("mouseup", handleEnd);
             document.addEventListener("touchmove", handleTouchMove);
             document.addEventListener("touchend", handleEnd);
         }
         return () => {
-            document.removeEventListener("mousemove", handleMouseMove);
+            document.removeEventListener("mousemove", handleMove);
             document.removeEventListener("mouseup", handleEnd);
             document.removeEventListener("touchmove", handleTouchMove);
             document.removeEventListener("touchend", handleEnd);
@@ -324,101 +146,37 @@ function DraggableSliderScreen({
     }, [isDragging, updateValue]);
 
     return (
-        <div style={baseStyles.container}>
-            <div style={{ fontSize: "48px", marginBottom: "16px" }}>🎯</div>
-            <h1 style={baseStyles.title}>
-                How often do you finish<br />what you start?
-            </h1>
-            <p style={{ ...baseStyles.subtitle, marginBottom: "48px" }}>
-                Be honest — drag the slider!
-            </p>
+        <Container>
+            <div className="text-5xl mb-4">🎯</div>
+            <h1 className="text-2xl font-bold text-center mb-3">How often do you finish<br />what you start?</h1>
+            <p className="text-muted-foreground text-center mb-12">Be honest — drag the slider!</p>
 
-            <div style={{ width: "100%", marginBottom: "48px" }}>
-                {/* Animated emoji */}
-                <div style={{
-                    fontSize: "80px",
-                    textAlign: "center",
-                    marginBottom: "32px",
-                    transition: "transform 0.15s ease",
-                    transform: `scale(${1 + value / 200}) rotate(${(value - 50) / 10}deg)`,
-                }}>
+            <div className="w-full mb-12">
+                <div className="text-7xl text-center mb-8 transition-transform duration-150" style={{ transform: `scale(${1 + value / 200}) rotate(${(value - 50) / 10}deg)` }}>
                     {currentEmoji}
                 </div>
-
-                {/* Slider */}
                 <div
                     ref={sliderRef}
                     onMouseDown={handleMouseDown}
                     onTouchStart={handleTouchStart}
-                    style={{
-                        width: "100%",
-                        height: "20px",
-                        background: colors.surface,
-                        borderRadius: "10px",
-                        cursor: "pointer",
-                        position: "relative",
-                        border: `1px solid ${colors.border}`,
-                        userSelect: "none",
-                        touchAction: "none",
-                    }}
+                    className="w-full h-5 bg-muted rounded-full cursor-pointer relative border border-border select-none touch-none"
                 >
-                    <div style={{
-                        width: `${value}%`,
-                        height: "100%",
-                        background: `linear-gradient(90deg, #FF6B6B, #FFEAA7, ${colors.accent})`,
-                        borderRadius: "10px",
-                        transition: isDragging ? "none" : "width 0.1s",
-                    }} />
-                    <div style={{
-                        position: "absolute",
-                        top: "50%",
-                        left: `${value}%`,
-                        transform: "translate(-50%, -50%)",
-                        width: "36px",
-                        height: "36px",
-                        background: "#fff",
-                        borderRadius: "50%",
-                        boxShadow: isDragging ? "0 4px 20px rgba(0,0,0,0.5)" : "0 2px 10px rgba(0,0,0,0.3)",
-                        cursor: isDragging ? "grabbing" : "grab",
-                        transition: isDragging ? "none" : "left 0.1s",
-                        border: `4px solid ${colors.primary}`,
-                    }} />
+                    <div className="h-full rounded-full" style={{ width: `${value}%`, background: "linear-gradient(90deg, #FF6B6B, #FFEAA7, #00D9A5)", transition: isDragging ? "none" : "width 0.1s" }} />
+                    <div
+                        className="absolute top-1/2 -translate-y-1/2 w-9 h-9 bg-white rounded-full border-4 border-primary"
+                        style={{ left: `${value}%`, transform: "translate(-50%, -50%)", boxShadow: isDragging ? "0 4px 20px rgba(0,0,0,0.5)" : "0 2px 10px rgba(0,0,0,0.3)", cursor: isDragging ? "grabbing" : "grab", transition: isDragging ? "none" : "left 0.1s" }}
+                    />
                 </div>
-
-                <div style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginTop: "16px",
-                    fontSize: "14px",
-                    color: colors.textSecondary,
-                    fontWeight: 500,
-                }}>
-                    <span>Almost never</span>
-                    <span>Always</span>
+                <div className="flex justify-between mt-4 text-sm text-muted-foreground font-medium">
+                    <span>Almost never</span><span>Always</span>
                 </div>
             </div>
-
             <ContinueButton onClick={onNext} />
-        </div>
+        </Container>
     );
 }
 
-// Animated Stat Screen with counting animation
-function AnimatedStatScreen({
-    onNext,
-    stat,
-    headline,
-    description,
-    emoji,
-    color = colors.primary
-}: {
-    onNext: () => void;
-    stat: string;
-    headline: string;
-    description: string;
-    emoji: string;
-    color?: string;
-}) {
+function AnimatedStatScreen({ onNext, stat, headline, description, emoji, color = "hsl(var(--primary))" }: { onNext: () => void; stat: string; headline: string; description: string; emoji: string; color?: string }) {
     const [displayStat, setDisplayStat] = useState("0%");
     const numericStat = parseInt(stat.replace(/\D/g, ""));
 
@@ -427,10 +185,7 @@ function AnimatedStatScreen({
             let current = 0;
             const interval = setInterval(() => {
                 current += Math.ceil(numericStat / 20);
-                if (current >= numericStat) {
-                    current = numericStat;
-                    clearInterval(interval);
-                }
+                if (current >= numericStat) { current = numericStat; clearInterval(interval); }
                 setDisplayStat(`${current}%`);
             }, 50);
             return () => clearInterval(interval);
@@ -440,171 +195,49 @@ function AnimatedStatScreen({
     }, [stat, numericStat]);
 
     return (
-        <div style={baseStyles.container}>
-            <div style={{
-                fontSize: "64px",
-                marginBottom: "16px",
-                animation: "bounce 1s ease infinite",
-            }}>
-                {emoji}
-            </div>
-
-            <div style={{
-                fontSize: "80px",
-                fontWeight: 800,
-                color: color,
-                lineHeight: 1,
-                marginBottom: "16px",
-                textShadow: `0 0 60px ${color}50`,
-            }}>
-                {displayStat}
-            </div>
-
-            <h1 style={{
-                fontSize: "24px",
-                fontWeight: 700,
-                color: colors.textPrimary,
-                marginBottom: "16px",
-                lineHeight: 1.3,
-                textAlign: "center",
-            }}>
-                {headline}
-            </h1>
-
-            <p style={{
-                fontSize: "16px",
-                color: colors.textSecondary,
-                lineHeight: 1.6,
-                maxWidth: "360px",
-                textAlign: "center",
-                marginBottom: "32px",
-            }}>
-                {description}
-            </p>
-
+        <Container>
+            <div className="text-6xl mb-4 animate-bounce">{emoji}</div>
+            <div className="text-7xl font-extrabold leading-none mb-4" style={{ color }}>{displayStat}</div>
+            <h1 className="text-2xl font-bold text-center mb-4 leading-snug">{headline}</h1>
+            <p className="text-muted-foreground text-center leading-relaxed max-w-sm mb-8">{description}</p>
             <ContinueButton onClick={onNext} />
-        </div>
+        </Container>
     );
 }
 
-// Momentum Killers Multi-Choice with haptic feedback feel
-function MomentumKillersScreen({
-    onNext,
-    selected,
-    onToggle,
-}: {
-    onNext: () => void;
-    selected: string[];
-    onToggle: (id: string) => void;
-}) {
-    const handleToggle = (id: string) => {
-        onToggle(id);
-    };
-
+function MomentumKillersScreen({ onNext, selected, onToggle }: { onNext: () => void; selected: string[]; onToggle: (id: string) => void }) {
     return (
-        <div style={baseStyles.container}>
-            <div style={{ fontSize: "48px", marginBottom: "16px" }}>💔</div>
-            <h1 style={baseStyles.title}>
-                What usually kills<br />your momentum?
-            </h1>
-            <p style={{ ...baseStyles.subtitle, marginBottom: "24px" }}>
-                Pick the ones that hit different 😅
-            </p>
-
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gap: "12px",
-                width: "100%",
-                marginBottom: "24px",
-            }}>
-                {momentumKillers.map((item) => {
+        <Container>
+            <div className="text-5xl mb-4">💔</div>
+            <h1 className="text-2xl font-bold text-center mb-3">What usually kills<br />your momentum?</h1>
+            <p className="text-muted-foreground text-center mb-6">Pick the ones that hit different 😅</p>
+            <div className="grid grid-cols-2 gap-3 w-full mb-6">
+                {momentumKillers.map(item => {
                     const isSelected = selected.includes(item.id);
                     return (
                         <button
                             key={item.id}
-                            onClick={() => handleToggle(item.id)}
-                            style={{
-                                position: "relative",
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                padding: "20px 12px",
-                                borderRadius: "16px",
-                                border: `2px solid ${isSelected ? "#FF6B6B" : colors.border}`,
-                                background: isSelected
-                                    ? "linear-gradient(135deg, rgba(255,107,107,0.2), rgba(255,107,107,0.1))"
-                                    : colors.surface,
-                                cursor: "pointer",
-                                transition: "all 0.2s",
-                                transform: isSelected ? "scale(1.05)" : "scale(1)",
-                                animation: isSelected ? "shake 0.3s ease" : "none",
-                            }}
-                        >
-                            {isSelected && (
-                                <div style={{
-                                    position: "absolute",
-                                    top: "-8px",
-                                    right: "-8px",
-                                    fontSize: "24px",
-                                    animation: "bounce 0.5s ease",
-                                }}>
-                                    💥
-                                </div>
+                            onClick={() => onToggle(item.id)}
+                            className={cn(
+                                "relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 cursor-pointer transition-all",
+                                isSelected ? "border-red-400 bg-red-500/10 scale-105" : "border-border bg-card hover:border-muted-foreground/40"
                             )}
-                            <span style={{
-                                fontSize: "36px",
-                                marginBottom: "8px",
-                                transition: "transform 0.2s",
-                                transform: isSelected ? "scale(1.2)" : "scale(1)",
-                            }}>
-                                {item.emoji}
-                            </span>
-                            <span style={{
-                                fontSize: "14px",
-                                fontWeight: 600,
-                                color: isSelected ? "#FF6B6B" : colors.textSecondary,
-                            }}>
-                                {item.label}
-                            </span>
+                        >
+                            {isSelected && <div className="absolute -top-2 -right-2 text-2xl">💥</div>}
+                            <span className={cn("text-4xl mb-2 transition-transform", isSelected && "scale-125")}>{item.emoji}</span>
+                            <span className={cn("text-sm font-semibold", isSelected ? "text-red-400" : "text-muted-foreground")}>{item.label}</span>
                         </button>
                     );
                 })}
             </div>
-
-            {selected.length > 0 && (
-                <p style={{
-                    color: "#FF6B6B",
-                    fontSize: "14px",
-                    marginBottom: "16px",
-                    fontWeight: 600,
-                }}>
-                    😤 {selected.length} pain points identified
-                </p>
-            )}
-
+            {selected.length > 0 && <p className="text-red-400 text-sm font-semibold mb-4">😤 {selected.length} pain points identified</p>}
             <ContinueButton onClick={onNext} disabled={selected.length === 0} />
-        </div>
+        </Container>
     );
 }
 
-// 1-10 Scale with animated number
-function ConsistencyScaleScreen({
-    onNext,
-    value,
-    onChange
-}: {
-    onNext: () => void;
-    value: number;
-    onChange: (v: number) => void;
-}) {
-    const getColor = (val: number) => {
-        if (val <= 3) return "#FF6B6B";
-        if (val <= 6) return "#FFEAA7";
-        return colors.accent;
-    };
-
+function ConsistencyScaleScreen({ onNext, value, onChange }: { onNext: () => void; value: number; onChange: (v: number) => void }) {
+    const getColor = (val: number) => val <= 3 ? "#FF6B6B" : val <= 6 ? "#FFEAA7" : "#00D9A5";
     const getMessage = (val: number) => {
         if (val <= 2) return { text: "We've all been there 😅", emoji: "📈" };
         if (val <= 4) return { text: "Room for growth!", emoji: "💪" };
@@ -612,897 +245,333 @@ function ConsistencyScaleScreen({
         if (val <= 8) return { text: "Pretty solid!", emoji: "⭐" };
         return { text: "Impressive!", emoji: "🚀" };
     };
-
     const msg = getMessage(value);
 
     return (
-        <div style={baseStyles.container}>
-            <div style={{ fontSize: "48px", marginBottom: "16px" }}>📊</div>
-            <h1 style={baseStyles.title}>
-                How consistent are you<br />with your goals?
-            </h1>
-            <p style={{ ...baseStyles.subtitle, marginBottom: "40px" }}>
-                Rate yourself 1-10
-            </p>
+        <Container>
+            <div className="text-5xl mb-4">📊</div>
+            <h1 className="text-2xl font-bold text-center mb-3">How consistent are you<br />with your goals?</h1>
+            <p className="text-muted-foreground text-center mb-10">Rate yourself 1-10</p>
 
-            {/* Large animated number */}
-            <div style={{
-                fontSize: "140px",
-                fontWeight: 900,
-                color: getColor(value),
-                lineHeight: 1,
-                marginBottom: "24px",
-                textShadow: `0 0 80px ${getColor(value)}60`,
-                transition: "all 0.3s ease",
-                transform: `scale(${0.9 + value / 100})`,
-            }}>
+            <div className="text-[140px] font-black leading-none mb-6 transition-all duration-300" style={{ color: getColor(value), transform: `scale(${0.9 + value / 100})` }}>
                 {value}
             </div>
 
-            {/* Scale buttons */}
-            <div style={{
-                display: "flex",
-                gap: "6px",
-                width: "100%",
-                marginBottom: "24px",
-            }}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+            <div className="flex gap-1.5 w-full mb-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
                     <button
                         key={num}
                         onClick={() => onChange(num)}
-                        style={{
-                            flex: 1,
-                            aspectRatio: "1",
-                            borderRadius: "10px",
-                            border: value === num ? `3px solid ${getColor(num)}` : `1px solid ${colors.border}`,
-                            background: value === num
-                                ? `linear-gradient(135deg, ${getColor(num)}, ${getColor(num)}80)`
-                                : colors.surface,
-                            color: value === num ? "#fff" : colors.textMuted,
-                            fontSize: "14px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            transition: "all 0.2s",
-                            transform: value === num ? "scale(1.15)" : "scale(1)",
-                            boxShadow: value === num ? `0 4px 20px ${getColor(num)}50` : "none",
-                        }}
+                        className={cn(
+                            "flex-1 aspect-square rounded-lg text-sm font-bold transition-all cursor-pointer",
+                            value === num ? "text-white scale-115 border-2" : "border border-border bg-card text-muted-foreground hover:bg-muted"
+                        )}
+                        style={value === num ? { background: getColor(num), borderColor: getColor(num), boxShadow: `0 4px 20px ${getColor(num)}80` } : undefined}
                     >
                         {num}
                     </button>
                 ))}
             </div>
 
-            {/* Dynamic message */}
-            <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "12px 20px",
-                background: `${getColor(value)}15`,
-                borderRadius: "12px",
-                marginBottom: "32px",
-            }}>
-                <span style={{ fontSize: "24px" }}>{msg.emoji}</span>
-                <span style={{
-                    fontSize: "16px",
-                    fontWeight: 600,
-                    color: getColor(value),
-                }}>
-                    {msg.text}
-                </span>
+            <div className="flex items-center gap-2 px-5 py-3 rounded-xl mb-8" style={{ background: `${getColor(value)}15` }}>
+                <span className="text-2xl">{msg.emoji}</span>
+                <span className="text-base font-semibold" style={{ color: getColor(value) }}>{msg.text}</span>
             </div>
 
             <ContinueButton onClick={onNext} />
-        </div>
+        </Container>
     );
 }
 
 function TestimonialScreen({ onNext }: { onNext: () => void }) {
     const [activeIndex, setActiveIndex] = useState(0);
-
     useEffect(() => {
-        const interval = setInterval(() => {
-            setActiveIndex((prev) => (prev + 1) % testimonials.length);
-        }, 3000);
+        const interval = setInterval(() => setActiveIndex(prev => (prev + 1) % testimonials.length), 3000);
         return () => clearInterval(interval);
     }, []);
 
     return (
-        <div style={baseStyles.container}>
-            <div style={{ fontSize: "48px", marginBottom: "16px" }}>💬</div>
-            <h1 style={baseStyles.title}>
-                This could be you!
-            </h1>
+        <Container>
+            <div className="text-5xl mb-4">💬</div>
+            <h1 className="text-2xl font-bold text-center mb-6">This could be you!</h1>
 
-            {/* Testimonial carousel */}
-            <div style={{
-                width: "100%",
-                marginBottom: "32px",
-            }}>
+            <div className="w-full mb-8">
                 {testimonials.map((t, i) => (
-                    <div
-                        key={i}
-                        style={{
-                            display: i === activeIndex ? "block" : "none",
-                            animation: "fadeIn 0.5s ease",
-                        }}
-                    >
-                        <div style={{
-                            background: colors.surface,
-                            borderRadius: "16px",
-                            padding: "24px",
-                            border: `1px solid ${colors.border}`,
-                        }}>
-                            <div style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "12px",
-                                marginBottom: "16px",
-                            }}>
-                                <div style={{
-                                    width: "48px",
-                                    height: "48px",
-                                    borderRadius: "50%",
-                                    background: `${colors.primary}20`,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: "24px",
-                                }}>
-                                    {t.avatar}
-                                </div>
+                    <Card key={i} className={cn("animate-in fade-in duration-500", i === activeIndex ? "block" : "hidden")}>
+                        <CardContent className="p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl">{t.avatar}</div>
                                 <div>
-                                    <div style={{ fontWeight: 600, fontSize: "16px" }}>{t.name}</div>
-                                    <div style={{
-                                        fontSize: "13px",
-                                        color: colors.accent,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "4px",
-                                    }}>
-                                        🔥 {t.streak} day streak
-                                    </div>
+                                    <div className="font-semibold">{t.name}</div>
+                                    <div className="text-xs text-green-500 font-medium">🔥 {t.streak} day streak</div>
                                 </div>
                             </div>
-                            <p style={{
-                                fontSize: "18px",
-                                lineHeight: 1.5,
-                                color: colors.textPrimary,
-                                fontStyle: "italic",
-                            }}>
-                                &quot;{t.text}&quot;
-                            </p>
-                        </div>
-                    </div>
+                            <p className="text-lg leading-relaxed italic">&quot;{t.text}&quot;</p>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
 
-            {/* Dots */}
-            <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
+            <div className="flex gap-2 mb-6">
                 {testimonials.map((_, i) => (
-                    <button
-                        key={i}
-                        onClick={() => setActiveIndex(i)}
-                        style={{
-                            width: i === activeIndex ? "24px" : "8px",
-                            height: "8px",
-                            borderRadius: "4px",
-                            background: i === activeIndex ? colors.primary : colors.border,
-                            border: "none",
-                            cursor: "pointer",
-                            transition: "all 0.3s",
-                        }}
-                    />
+                    <button key={i} onClick={() => setActiveIndex(i)} className={cn("h-2 rounded-full transition-all cursor-pointer", i === activeIndex ? "w-6 bg-primary" : "w-2 bg-border")} />
                 ))}
             </div>
 
             <ContinueButton onClick={onNext} />
-        </div>
+        </Container>
     );
 }
 
-function GoalSelectionScreen({
-    onNext,
-    selected,
-    onToggle,
-}: {
-    onNext: () => void;
-    selected: string[];
-    onToggle: (id: string) => void;
-}) {
+function GoalSelectionScreen({ onNext, selected, onToggle }: { onNext: () => void; selected: string[]; onToggle: (id: string) => void }) {
     return (
-        <div style={baseStyles.container}>
-            <div style={{ fontSize: "48px", marginBottom: "16px" }}>🎯</div>
-            <h1 style={baseStyles.title}>
-                What are you<br />working towards?
-            </h1>
-            <p style={{ ...baseStyles.subtitle, marginBottom: "24px" }}>
-                We&apos;ll match you with the right groups
-            </p>
+        <Container>
+            <div className="text-5xl mb-4">🎯</div>
+            <h1 className="text-2xl font-bold text-center mb-3">What are you<br />working towards?</h1>
+            <p className="text-muted-foreground text-center mb-6">We&apos;ll match you with the right groups</p>
 
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gap: "12px",
-                width: "100%",
-                marginBottom: "24px",
-            }}>
-                {goalTypes.map((item) => {
+            <div className="grid grid-cols-2 gap-3 w-full mb-6">
+                {goalTypes.map(item => {
                     const isSelected = selected.includes(item.id);
                     return (
                         <button
                             key={item.id}
                             onClick={() => onToggle(item.id)}
-                            style={{
-                                position: "relative",
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                padding: "20px 12px",
-                                borderRadius: "16px",
-                                border: `2px solid ${isSelected ? colors.primary : colors.border}`,
-                                background: isSelected
-                                    ? `linear-gradient(135deg, rgba(108,92,231,0.2), rgba(108,92,231,0.1))`
-                                    : colors.surface,
-                                cursor: "pointer",
-                                transition: "all 0.2s",
-                                transform: isSelected ? "scale(1.02)" : "scale(1)",
-                            }}
+                            className={cn(
+                                "relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 cursor-pointer transition-all",
+                                isSelected ? "border-primary bg-primary/10 scale-[1.02]" : "border-border bg-card hover:border-muted-foreground/40"
+                            )}
                         >
                             {isSelected && (
-                                <div style={{
-                                    position: "absolute",
-                                    top: "8px",
-                                    right: "8px",
-                                    width: "22px",
-                                    height: "22px",
-                                    borderRadius: "50%",
-                                    background: colors.primary,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                }}>
-                                    <span style={{ color: "#fff", fontSize: "12px", fontWeight: 700 }}>✓</span>
+                                <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                    <Check size={12} className="text-primary-foreground" />
                                 </div>
                             )}
-                            <span style={{ fontSize: "32px", marginBottom: "8px" }}>{item.emoji}</span>
-                            <span style={{
-                                fontSize: "14px",
-                                fontWeight: 600,
-                                color: isSelected ? colors.primaryLight : colors.textSecondary,
-                            }}>
-                                {item.label}
-                            </span>
+                            <span className="text-3xl mb-2">{item.emoji}</span>
+                            <span className={cn("text-sm font-semibold", isSelected ? "text-primary" : "text-muted-foreground")}>{item.label}</span>
                         </button>
                     );
                 })}
             </div>
 
-            {selected.length > 0 && (
-                <p style={{
-                    color: colors.accent,
-                    fontSize: "14px",
-                    marginBottom: "16px",
-                    fontWeight: 600,
-                }}>
-                    ✨ {selected.length} selected
-                </p>
-            )}
-
+            {selected.length > 0 && <p className="text-green-500 text-sm font-semibold mb-4">✨ {selected.length} selected</p>}
             <ContinueButton onClick={onNext} disabled={selected.length === 0} />
-        </div>
+        </Container>
     );
 }
 
 function AppPreviewGroupsScreen({ onNext }: { onNext: () => void }) {
     return (
-        <div style={baseStyles.container}>
-            <div style={{
-                fontSize: "12px",
-                color: colors.primary,
-                fontWeight: 600,
-                marginBottom: "12px",
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-            }}>
-                App Preview
-            </div>
-            <h1 style={{ ...baseStyles.title, marginBottom: "8px" }}>
-                Find your tribe
-            </h1>
-            <p style={{ ...baseStyles.subtitle, marginBottom: "24px" }}>
-                Join small groups of like-minded people
-            </p>
+        <Container>
+            <Badge variant="outline" className="mb-3 text-primary border-primary/30">App Preview</Badge>
+            <h1 className="text-2xl font-bold text-center mb-2">Find your tribe</h1>
+            <p className="text-muted-foreground text-center mb-6">Join small groups of like-minded people</p>
 
-            {/* Mock group cards */}
-            <div style={{
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-                marginBottom: "24px",
-            }}>
+            <div className="w-full space-y-3 mb-6">
                 {sampleGroups.map((group, i) => (
-                    <div
-                        key={i}
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "14px",
-                            padding: "16px",
-                            background: colors.surface,
-                            borderRadius: "14px",
-                            border: `1px solid ${colors.border}`,
-                            animation: `fadeIn 0.4s ease ${i * 0.1}s both`,
-                        }}
-                    >
-                        <div style={{
-                            width: "52px",
-                            height: "52px",
-                            borderRadius: "14px",
-                            background: `linear-gradient(135deg, ${colors.primary}30, ${colors.primaryLight}20)`,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "28px",
-                        }}>
-                            {group.emoji}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600, fontSize: "16px", marginBottom: "4px" }}>
-                                {group.name}
+                    <Card key={i} className="animate-in fade-in duration-400" style={{ animationDelay: `${i * 100}ms`, animationFillMode: "both" }}>
+                        <CardContent className="p-4 flex items-center gap-3.5">
+                            <div className="w-13 h-13 rounded-xl bg-primary/10 flex items-center justify-center text-3xl shrink-0">{group.emoji}</div>
+                            <div className="flex-1 min-w-0">
+                                <div className="font-semibold mb-0.5">{group.name}</div>
+                                <div className="text-xs text-muted-foreground">{group.members} members • {group.streak}</div>
                             </div>
-                            <div style={{ fontSize: "13px", color: colors.textMuted }}>
-                                {group.members} members • {group.streak}
-                            </div>
-                        </div>
-                        <div style={{
-                            padding: "8px 14px",
-                            borderRadius: "8px",
-                            background: `${colors.primary}20`,
-                            color: colors.primary,
-                            fontSize: "13px",
-                            fontWeight: 600,
-                        }}>
-                            Join
-                        </div>
-                    </div>
+                            <Badge className="bg-primary/10 text-primary hover:bg-primary/20">Join</Badge>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
 
-            <p style={{
-                fontSize: "13px",
-                color: colors.textMuted,
-                textAlign: "center",
-                marginBottom: "24px",
-            }}>
-                Small groups (5-30 people) = more accountability
-            </p>
-
+            <p className="text-xs text-muted-foreground text-center mb-6">Small groups (5-30 people) = more accountability</p>
             <ContinueButton onClick={onNext} />
-        </div>
+        </Container>
     );
 }
 
 function AppPreviewCheckInScreen({ onNext }: { onNext: () => void }) {
     const [liked, setLiked] = useState(false);
-
     return (
-        <div style={baseStyles.container}>
-            <div style={{
-                fontSize: "12px",
-                color: colors.primary,
-                fontWeight: 600,
-                marginBottom: "12px",
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-            }}>
-                App Preview
-            </div>
-            <h1 style={{ ...baseStyles.title, marginBottom: "8px" }}>
-                Daily check-ins
-            </h1>
-            <p style={{ ...baseStyles.subtitle, marginBottom: "24px" }}>
-                Share your progress, get support
-            </p>
+        <Container>
+            <Badge variant="outline" className="mb-3 text-primary border-primary/30">App Preview</Badge>
+            <h1 className="text-2xl font-bold text-center mb-2">Daily check-ins</h1>
+            <p className="text-muted-foreground text-center mb-6">Share your progress, get support</p>
 
-            {/* Mock post */}
-            <div style={{
-                width: "100%",
-                background: colors.surface,
-                borderRadius: "16px",
-                border: `1px solid ${colors.border}`,
-                overflow: "hidden",
-                marginBottom: "24px",
-            }}>
-                {/* Post header */}
-                <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "16px",
-                    borderBottom: `1px solid ${colors.border}`,
-                }}>
-                    <div style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "50%",
-                        background: `${colors.accent}20`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "20px",
-                    }}>
-                        👨‍💻
+            <Card className="w-full mb-6">
+                <div className="flex items-center gap-3 p-4 border-b border-border">
+                    <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-xl">👨‍💻</div>
+                    <div className="flex-1">
+                        <div className="font-semibold text-sm">Alex M.</div>
+                        <div className="text-xs text-muted-foreground">Just now • Day 12</div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: "15px" }}>Alex M.</div>
-                        <div style={{ fontSize: "12px", color: colors.textMuted }}>Just now • Day 12</div>
-                    </div>
-                    <div style={{
-                        padding: "6px 10px",
-                        borderRadius: "6px",
-                        background: `${colors.accent}15`,
-                        color: colors.accent,
-                        fontSize: "12px",
-                        fontWeight: 600,
-                    }}>
-                        🔥 12
-                    </div>
+                    <Badge variant="secondary" className="text-green-500 text-xs">🔥 12</Badge>
                 </div>
-
-                {/* Post content */}
-                <div style={{ padding: "16px" }}>
-                    <p style={{ fontSize: "15px", lineHeight: 1.6, marginBottom: "16px" }}>
-                        Did a 20 min workout before work! 💪 Small win but staying consistent.
-                        Thanks for the push yesterday @Sarah!
-                    </p>
-
-                    {/* Reactions */}
-                    <div style={{
-                        display: "flex",
-                        gap: "12px",
-                    }}>
+                <CardContent className="p-4">
+                    <p className="text-sm leading-relaxed mb-4">Did a 20 min workout before work! 💪 Small win but staying consistent. Thanks for the push yesterday @Sarah!</p>
+                    <div className="flex gap-3">
                         <button
                             onClick={() => setLiked(!liked)}
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                padding: "8px 14px",
-                                borderRadius: "8px",
-                                background: liked ? `${colors.primary}20` : colors.bg,
-                                border: `1px solid ${liked ? colors.primary : colors.border}`,
-                                color: liked ? colors.primary : colors.textSecondary,
-                                cursor: "pointer",
-                                fontSize: "14px",
-                                fontWeight: 500,
-                                transition: "all 0.2s",
-                            }}
+                            className={cn(
+                                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border",
+                                liked ? "bg-primary/10 border-primary text-primary" : "bg-muted border-border text-muted-foreground"
+                            )}
                         >
                             {liked ? "🔥" : "👍"} {liked ? "5" : "4"}
                         </button>
-                        <button style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "8px 14px",
-                            borderRadius: "8px",
-                            background: colors.bg,
-                            border: `1px solid ${colors.border}`,
-                            color: colors.textSecondary,
-                            cursor: "pointer",
-                            fontSize: "14px",
-                            fontWeight: 500,
-                        }}>
-                            💬 2
-                        </button>
+                        <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-muted border border-border text-muted-foreground">💬 2</button>
                     </div>
-                </div>
-            </div>
+                </CardContent>
+            </Card>
 
-            <p style={{
-                fontSize: "13px",
-                color: colors.textMuted,
-                textAlign: "center",
-                marginBottom: "24px",
-            }}>
-                Your group sees when you&apos;re inactive 👀
-            </p>
-
+            <p className="text-xs text-muted-foreground text-center mb-6">Your group sees when you&apos;re inactive 👀</p>
             <ContinueButton onClick={onNext} />
-        </div>
+        </Container>
     );
 }
 
 function AppPreviewStreakScreen({ onNext }: { onNext: () => void }) {
     return (
-        <div style={baseStyles.container}>
-            <div style={{
-                fontSize: "12px",
-                color: colors.primary,
-                fontWeight: 600,
-                marginBottom: "12px",
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-            }}>
-                App Preview
-            </div>
-            <h1 style={{ ...baseStyles.title, marginBottom: "8px" }}>
-                Watch yourself grow
-            </h1>
-            <p style={{ ...baseStyles.subtitle, marginBottom: "24px" }}>
-                Track streaks & climb the leaderboard
-            </p>
+        <Container>
+            <Badge variant="outline" className="mb-3 text-primary border-primary/30">App Preview</Badge>
+            <h1 className="text-2xl font-bold text-center mb-2">Watch yourself grow</h1>
+            <p className="text-muted-foreground text-center mb-6">Track streaks & climb the leaderboard</p>
 
-            {/* Mock streak display */}
-            <div style={{
-                width: "100%",
-                background: colors.surface,
-                borderRadius: "16px",
-                border: `1px solid ${colors.border}`,
-                padding: "24px",
-                marginBottom: "16px",
-                textAlign: "center",
-            }}>
-                <div style={{
-                    fontSize: "72px",
-                    fontWeight: 800,
-                    background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    marginBottom: "8px",
-                }}>
-                    23
-                </div>
-                <div style={{
-                    fontSize: "16px",
-                    color: colors.textSecondary,
-                    fontWeight: 500,
-                }}>
-                    🔥 Day Streak
-                </div>
-            </div>
+            <Card className="w-full mb-4 text-center">
+                <CardContent className="p-6">
+                    <div className="text-7xl font-extrabold bg-gradient-to-br from-primary to-green-500 bg-clip-text text-transparent mb-2">23</div>
+                    <div className="text-muted-foreground font-medium">🔥 Day Streak</div>
+                </CardContent>
+            </Card>
 
-            {/* Mock leaderboard */}
-            <div style={{
-                width: "100%",
-                background: colors.surface,
-                borderRadius: "16px",
-                border: `1px solid ${colors.border}`,
-                overflow: "hidden",
-                marginBottom: "24px",
-            }}>
-                <div style={{
-                    padding: "12px 16px",
-                    borderBottom: `1px solid ${colors.border}`,
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    color: colors.textMuted,
-                }}>
-                    🏆 Group Leaderboard
-                </div>
+            <Card className="w-full mb-6 overflow-hidden">
+                <div className="px-4 py-3 border-b border-border text-xs font-semibold text-muted-foreground">🏆 Group Leaderboard</div>
                 {[
                     { rank: 1, name: "Sarah K.", streak: 47, you: false },
                     { rank: 2, name: "You", streak: 23, you: true },
                     { rank: 3, name: "Marcus T.", streak: 19, you: false },
                 ].map((member, i) => (
-                    <div
-                        key={i}
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "12px",
-                            padding: "12px 16px",
-                            background: member.you ? `${colors.primary}10` : "transparent",
-                            borderBottom: i < 2 ? `1px solid ${colors.border}` : "none",
-                        }}
-                    >
-                        <div style={{
-                            width: "28px",
-                            height: "28px",
-                            borderRadius: "50%",
-                            background: member.rank === 1 ? "#FFD700" : member.rank === 2 ? "#C0C0C0" : "#CD7F32",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "14px",
-                            fontWeight: 700,
-                            color: colors.bg,
-                        }}>
+                    <div key={i} className={cn("flex items-center gap-3 px-4 py-3", member.you && "bg-primary/5", i < 2 && "border-b border-border")}>
+                        <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-background"
+                            style={{ background: member.rank === 1 ? "#FFD700" : member.rank === 2 ? "#C0C0C0" : "#CD7F32" }}
+                        >
                             {member.rank}
                         </div>
-                        <div style={{ flex: 1, fontWeight: member.you ? 600 : 400 }}>
-                            {member.name}
-                        </div>
-                        <div style={{
-                            fontSize: "14px",
-                            color: colors.accent,
-                            fontWeight: 600,
-                        }}>
-                            🔥 {member.streak}
-                        </div>
+                        <div className={cn("flex-1", member.you && "font-semibold")}>{member.name}</div>
+                        <div className="text-sm text-green-500 font-semibold">🔥 {member.streak}</div>
                     </div>
                 ))}
-            </div>
+            </Card>
 
             <ContinueButton onClick={onNext} />
-        </div>
+        </Container>
     );
 }
 
 function CommunityQuestionScreen({ onNext }: { onNext: () => void }) {
-    const handleSelect = () => {
-        setTimeout(onNext, 300);
-    };
-
     return (
-        <div style={baseStyles.container}>
-            <div style={{ fontSize: "48px", marginBottom: "16px" }}>🤝</div>
-            <h1 style={baseStyles.title}>
-                Ready to join a<br />supportive community?
-            </h1>
-            <p style={{ ...baseStyles.subtitle, marginBottom: "32px" }}>
-                People who cheer you on & keep you accountable
-            </p>
-
-            <div style={{ display: "flex", gap: "16px", width: "100%" }}>
+        <Container>
+            <div className="text-5xl mb-4">🤝</div>
+            <h1 className="text-2xl font-bold text-center mb-3">Ready to join a<br />supportive community?</h1>
+            <p className="text-muted-foreground text-center mb-8">People who cheer you on & keep you accountable</p>
+            <div className="flex gap-4 w-full">
                 {[
                     { id: "definitely", label: "Let's do this!", emoji: "🙌" },
                     { id: "maybe", label: "Tell me more", emoji: "🤔" },
-                ].map((option) => (
+                ].map(option => (
                     <button
                         key={option.id}
-                        onClick={handleSelect}
-                        style={{
-                            flex: 1,
-                            padding: "32px 24px",
-                            borderRadius: "16px",
-                            border: `2px solid ${colors.border}`,
-                            background: colors.surface,
-                            cursor: "pointer",
-                            transition: "all 0.2s",
-                        }}
+                        onClick={() => setTimeout(onNext, 300)}
+                        className="flex-1 p-8 rounded-2xl border-2 border-border bg-card cursor-pointer transition-all hover:border-primary hover:bg-primary/5"
                     >
-                        <div style={{ fontSize: "48px", marginBottom: "12px" }}>{option.emoji}</div>
-                        <div style={{
-                            fontSize: "18px",
-                            fontWeight: 600,
-                            color: colors.textPrimary,
-                        }}>
-                            {option.label}
-                        </div>
+                        <div className="text-5xl mb-3">{option.emoji}</div>
+                        <div className="text-lg font-semibold">{option.label}</div>
                     </button>
                 ))}
             </div>
-        </div>
+        </Container>
     );
 }
 
-function InterestsScreen({
-    onNext,
-    selected,
-    onToggle
-}: {
-    onNext: () => void;
-    selected: string[];
-    onToggle: (id: string) => void;
-}) {
+function InterestsScreen({ onNext, selected, onToggle }: { onNext: () => void; selected: string[]; onToggle: (id: string) => void }) {
     return (
-        <div style={baseStyles.container}>
-            <div style={{ fontSize: "48px", marginBottom: "16px" }}>✨</div>
-            <h1 style={baseStyles.title}>
-                Final step!<br />Pick your interests
-            </h1>
-            <p style={{ ...baseStyles.subtitle, marginBottom: "24px" }}>
-                We&apos;ll recommend groups you&apos;ll love
-            </p>
+        <Container>
+            <div className="text-5xl mb-4">✨</div>
+            <h1 className="text-2xl font-bold text-center mb-3">Final step!<br />Pick your interests</h1>
+            <p className="text-muted-foreground text-center mb-6">We&apos;ll recommend groups you&apos;ll love</p>
 
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: "10px",
-                width: "100%",
-                marginBottom: "24px",
-            }}>
-                {interests.map((item) => {
+            <div className="grid grid-cols-4 gap-2.5 w-full mb-6">
+                {interests.map(item => {
                     const isSelected = selected.includes(item.id);
                     return (
                         <button
                             key={item.id}
                             onClick={() => onToggle(item.id)}
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                padding: "14px 8px",
-                                borderRadius: "12px",
-                                border: `2px solid ${isSelected ? colors.primary : colors.border}`,
-                                background: isSelected
-                                    ? `linear-gradient(135deg, rgba(108,92,231,0.2), rgba(108,92,231,0.1))`
-                                    : colors.surface,
-                                cursor: "pointer",
-                                transition: "all 0.2s",
-                            }}
+                            className={cn(
+                                "flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all",
+                                isSelected ? "border-primary bg-primary/10" : "border-border bg-card hover:border-muted-foreground/40"
+                            )}
                         >
-                            <span style={{ fontSize: "24px", marginBottom: "4px" }}>{item.emoji}</span>
-                            <span style={{
-                                fontSize: "11px",
-                                fontWeight: 600,
-                                color: isSelected ? colors.primaryLight : colors.textSecondary,
-                            }}>
-                                {item.label}
-                            </span>
+                            <span className="text-2xl mb-1">{item.emoji}</span>
+                            <span className={cn("text-[11px] font-semibold", isSelected ? "text-primary" : "text-muted-foreground")}>{item.label}</span>
                         </button>
                     );
                 })}
             </div>
 
-            {selected.length > 0 && (
-                <p style={{
-                    color: colors.accent,
-                    fontSize: "14px",
-                    marginBottom: "16px",
-                    fontWeight: 600,
-                }}>
-                    ✨ {selected.length} selected
-                </p>
-            )}
-
+            {selected.length > 0 && <p className="text-green-500 text-sm font-semibold mb-4">✨ {selected.length} selected</p>}
             <ContinueButton onClick={onNext} disabled={selected.length === 0} />
-        </div>
+        </Container>
     );
 }
 
-function NameScreen({
-    onNext,
-    name,
-    onChange
-}: {
-    onNext: () => void;
-    name: string;
-    onChange: (n: string) => void;
-}) {
+function NameScreen({ onNext, name, onChange }: { onNext: () => void; name: string; onChange: (n: string) => void }) {
     const isValid = name.trim().length >= 2;
-
     return (
-        <div style={baseStyles.container}>
-            <div style={{
-                fontSize: "56px",
-                marginBottom: "24px",
-                animation: "wave 1s ease-in-out infinite",
-            }}>
-                👋
-            </div>
-            <h1 style={baseStyles.title}>
-                What should we<br />call you?
-            </h1>
-            <p style={{ ...baseStyles.subtitle, marginBottom: "32px" }}>
-                This is how you&apos;ll appear in groups
-            </p>
-
-            <input
+        <Container>
+            <div className="text-6xl mb-6">👋</div>
+            <h1 className="text-2xl font-bold text-center mb-3">What should we<br />call you?</h1>
+            <p className="text-muted-foreground text-center mb-8">This is how you&apos;ll appear in groups</p>
+            <Input
                 type="text"
                 value={name}
-                onChange={(e) => onChange(e.target.value)}
+                onChange={e => onChange(e.target.value)}
                 placeholder="Your name"
                 autoFocus
-                style={{
-                    width: "100%",
-                    padding: "18px 24px",
-                    fontSize: "20px",
-                    fontWeight: 600,
-                    fontFamily: "inherit",
-                    borderRadius: "14px",
-                    border: `2px solid ${isValid ? colors.primary : colors.border}`,
-                    background: colors.surface,
-                    color: colors.textPrimary,
-                    textAlign: "center",
-                    outline: "none",
-                    marginBottom: "16px",
-                    transition: "all 0.2s",
-                }}
+                className={cn("w-full h-14 text-xl text-center font-semibold rounded-xl mb-4 border-2", isValid ? "border-primary" : "border-border")}
             />
-
-            {isValid && (
-                <p style={{
-                    color: colors.accent,
-                    fontSize: "16px",
-                    marginBottom: "24px",
-                    fontWeight: 600,
-                }}>
-                    Nice to meet you, {name}! 🎉
-                </p>
-            )}
-
+            {isValid && <p className="text-green-500 font-semibold mb-6">Nice to meet you, {name}! 🎉</p>}
             <ContinueButton onClick={onNext} disabled={!isValid} />
-        </div>
+        </Container>
     );
 }
 
 function ReadyScreen({ onComplete, name }: { onComplete: () => void; name: string }) {
     return (
-        <div style={baseStyles.container}>
-            <div style={{
-                fontSize: "80px",
-                marginBottom: "24px",
-                animation: "pulse 2s ease infinite",
-            }}>
-                🎉
-            </div>
-            <h1 style={{
-                ...baseStyles.title,
-                fontSize: "32px",
-            }}>
-                Welcome, {name}!
-            </h1>
-            <p style={{ ...baseStyles.subtitle, fontSize: "18px", marginBottom: "32px" }}>
-                Your accountability journey starts now.<br />
-                Let&apos;s find your perfect group.
+        <Container>
+            <div className="text-7xl mb-6 animate-pulse">🎉</div>
+            <h1 className="text-3xl font-bold text-center mb-3">Welcome, {name}!</h1>
+            <p className="text-lg text-muted-foreground text-center mb-8">
+                Your accountability journey starts now.<br />Let&apos;s find your perfect group.
             </p>
 
-            {/* Quick promise */}
-            <div style={{
-                width: "100%",
-                background: colors.surface,
-                borderRadius: "16px",
-                padding: "20px",
-                marginBottom: "32px",
-                border: `1px solid ${colors.border}`,
-            }}>
-                <div style={{
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    color: colors.textMuted,
-                    marginBottom: "12px",
-                }}>
-                    ✨ What happens next:
-                </div>
-                {[
-                    "Browse groups that match your interests",
-                    "Join one that feels right",
-                    "Post your first check-in today",
-                ].map((item, i) => (
-                    <div
-                        key={i}
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: i < 2 ? "10px" : 0,
-                            fontSize: "14px",
-                            color: colors.textSecondary,
-                        }}
-                    >
-                        <span style={{
-                            width: "22px",
-                            height: "22px",
-                            borderRadius: "50%",
-                            background: `${colors.primary}20`,
-                            color: colors.primary,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "12px",
-                            fontWeight: 700,
-                        }}>
-                            {i + 1}
-                        </span>
-                        {item}
-                    </div>
-                ))}
-            </div>
+            <Card className="w-full mb-8">
+                <CardContent className="p-5">
+                    <div className="text-sm font-semibold text-muted-foreground mb-3">✨ What happens next:</div>
+                    {["Browse groups that match your interests", "Join one that feels right", "Post your first check-in today"].map((item, i) => (
+                        <div key={i} className={cn("flex items-center gap-2.5 text-sm text-muted-foreground", i < 2 && "mb-2.5")}>
+                            <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                            {item}
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
 
             <ContinueButton onClick={onComplete} label="Find my group →" />
-        </div>
+        </Container>
     );
 }
 
-// ============================================
-// MAIN COMPONENT
-// ============================================
+/* ──────────────────── MAIN ──────────────────── */
 
 function OnboardingContent() {
     const router = useRouter();
@@ -1510,14 +579,12 @@ function OnboardingContent() {
     const pathname = usePathname();
 
     const step = parseInt(searchParams.get("step") || "0");
-
     const setStep = (newStep: number) => {
         const params = new URLSearchParams(searchParams.toString());
         params.set("step", newStep.toString());
         router.push(`${pathname}?${params.toString()}`);
     };
 
-    // State
     const [userCount, setUserCount] = useState(2847);
     const [sliderValue, setSliderValue] = useState(50);
     const [momentumKillersSelected, setMomentumKillersSelected] = useState<string[]>([]);
@@ -1529,185 +596,52 @@ function OnboardingContent() {
     useEffect(() => {
         const fetchUserCount = async () => {
             const supabase = createClient();
-            const { count } = await supabase
-                .from("profiles")
-                .select("*", { count: "exact", head: true });
+            const { count } = await supabase.from("profiles").select("*", { count: "exact", head: true });
             if (count) setUserCount(count);
         };
         fetchUserCount();
     }, []);
 
-    const toggleMomentumKiller = (id: string) => {
-        setMomentumKillersSelected((prev) => {
-            if (prev.includes(id)) return prev.filter((i) => i !== id);
-            return [...prev, id];
-        });
-    };
-
-    const toggleGoalType = (id: string) => {
-        setGoalTypesSelected((prev) => {
-            if (prev.includes(id)) return prev.filter((i) => i !== id);
-            return [...prev, id];
-        });
-    };
-
-    const toggleInterest = (id: string) => {
-        setSelectedInterests((prev) =>
-            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-        );
-    };
+    const toggle = (setter: React.Dispatch<React.SetStateAction<string[]>>) => (id: string) =>
+        setter(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
     const nextStep = () => setStep(step + 1);
-
-    const handleComplete = () => {
-        router.push("/login?next=/");
-    };
-
+    const handleComplete = () => router.push("/login?next=/");
     const totalSteps = 15;
 
     const screens = [
-        // 0: Human Welcome with social proof
         <HumanWelcomeScreen key="welcome" onNext={nextStep} userCount={userCount} />,
-
-        // 1: Interactive Slider - finish rate
         <DraggableSliderScreen key="slider" onNext={nextStep} value={sliderValue} onChange={setSliderValue} />,
-
-        // 2: Animated Stat - 92% fail
-        <AnimatedStatScreen
-            key="stat1"
-            onNext={nextStep}
-            emoji="📉"
-            stat="92%"
-            headline="of resolutions fail by February"
-            description="The #1 reason? No accountability. No one watching. No consequences for quitting."
-            color="#FF6B6B"
-        />,
-
-        // 3: Momentum Killers
-        <MomentumKillersScreen
-            key="momentum"
-            onNext={nextStep}
-            selected={momentumKillersSelected}
-            onToggle={toggleMomentumKiller}
-        />,
-
-        // 4: Animated Stat - 65% more likely
-        <AnimatedStatScreen
-            key="stat2"
-            onNext={nextStep}
-            emoji="🔬"
-            stat="65%"
-            headline="more likely to succeed with a partner"
-            description="And 95% more likely with regular check-ins. Science says accountability works."
-            color={colors.accent}
-        />,
-
-        // 5: Testimonials
+        <AnimatedStatScreen key="stat1" onNext={nextStep} emoji="📉" stat="92%" headline="of resolutions fail by February" description="The #1 reason? No accountability. No one watching. No consequences for quitting." color="#FF6B6B" />,
+        <MomentumKillersScreen key="momentum" onNext={nextStep} selected={momentumKillersSelected} onToggle={toggle(setMomentumKillersSelected)} />,
+        <AnimatedStatScreen key="stat2" onNext={nextStep} emoji="🔬" stat="65%" headline="more likely to succeed with a partner" description="And 95% more likely with regular check-ins. Science says accountability works." color="#00D9A5" />,
         <TestimonialScreen key="testimonials" onNext={nextStep} />,
-
-        // 6: Goal selection
-        <GoalSelectionScreen
-            key="goals"
-            onNext={nextStep}
-            selected={goalTypesSelected}
-            onToggle={toggleGoalType}
-        />,
-
-        // 7: Consistency scale
+        <GoalSelectionScreen key="goals" onNext={nextStep} selected={goalTypesSelected} onToggle={toggle(setGoalTypesSelected)} />,
         <ConsistencyScaleScreen key="scale" onNext={nextStep} value={consistencyScore} onChange={setConsistencyScore} />,
-
-        // 8: App Preview - Groups
         <AppPreviewGroupsScreen key="preview-groups" onNext={nextStep} />,
-
-        // 9: App Preview - Check-in
         <AppPreviewCheckInScreen key="preview-checkin" onNext={nextStep} />,
-
-        // 10: App Preview - Streaks
         <AppPreviewStreakScreen key="preview-streak" onNext={nextStep} />,
-
-        // 11: Community question
         <CommunityQuestionScreen key="community" onNext={nextStep} />,
-
-        // 12: Interests
-        <InterestsScreen key="interests" onNext={nextStep} selected={selectedInterests} onToggle={toggleInterest} />,
-
-        // 13: Name
+        <InterestsScreen key="interests" onNext={nextStep} selected={selectedInterests} onToggle={toggle(setSelectedInterests)} />,
         <NameScreen key="name" onNext={nextStep} name={name} onChange={setName} />,
-
-        // 14: Ready
         <ReadyScreen key="ready" onComplete={handleComplete} name={name} />,
     ];
 
-    if (step >= screens.length) {
-        return <ReadyScreen key="ready" onComplete={handleComplete} name={name} />;
-    }
+    if (step >= screens.length) return <ReadyScreen key="ready" onComplete={handleComplete} name={name} />;
 
     return (
-        <div style={baseStyles.page}>
+        <div className="min-h-screen flex flex-col bg-background text-foreground">
             <ProgressBar current={step} total={totalSteps} />
-
-            <div style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                animation: "fadeIn 0.3s ease",
-            }}>
+            <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {screens[step]}
             </div>
-
-            {/* Animations */}
-            <style jsx global>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                @keyframes pulse {
-                    0%, 100% { transform: scale(1); }
-                    50% { transform: scale(1.05); }
-                }
-                @keyframes bounce {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-                @keyframes wave {
-                    0%, 100% { transform: rotate(0deg); }
-                    25% { transform: rotate(20deg); }
-                    75% { transform: rotate(-15deg); }
-                }
-                @keyframes shake {
-                    0%, 100% { transform: scale(1.05) rotate(0deg); }
-                    25% { transform: scale(1.05) rotate(-3deg); }
-                    75% { transform: scale(1.05) rotate(3deg); }
-                }
-                @keyframes glow {
-                    0%, 100% { box-shadow: 0 0 20px rgba(108, 92, 231, 0.3); }
-                    50% { box-shadow: 0 0 40px rgba(108, 92, 231, 0.6); }
-                }
-                * {
-                    box-sizing: border-box;
-                }
-                input::placeholder {
-                    color: ${colors.textMuted};
-                }
-            `}</style>
         </div>
     );
 }
 
 export default function OnboardingPage() {
     return (
-        <Suspense fallback={
-            <div style={{
-                minHeight: "100vh",
-                background: "#0A0A0B",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#6B6B74"
-            }}>
-                Loading...
-            </div>
-        }>
+        <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
             <OnboardingContent />
         </Suspense>
     );

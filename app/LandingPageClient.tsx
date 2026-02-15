@@ -2,25 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-
-// ============================================
-// COLORS & STYLES
-// ============================================
-
-const colors = {
-    bg: "#0A0A0B",
-    surface: "#141416",
-    surfaceHover: "#1A1A1E",
-    border: "#2A2A2E",
-    primary: "#6C5CE7",
-    primaryLight: "#A29BFE",
-    accent: "#00D9A5",
-    warning: "#FFEAA7",
-    danger: "#FF6B6B",
-    textPrimary: "#FFFFFF",
-    textSecondary: "#B8B8C0",
-    textMuted: "#6B6B74",
-};
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ArrowRight, Rocket } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // ============================================
 // DATA
@@ -33,9 +19,9 @@ const testimonials = [
 ];
 
 const sampleGroups = [
-    { name: "Morning Runners", emoji: "🏃", members: 24, color: "#FF6B6B" },
-    { name: "Code Every Day", emoji: "💻", members: 156, color: "#6C5CE7" },
-    { name: "Learn Spanish", emoji: "🇪🇸", members: 89, color: "#00D9A5" },
+    { name: "Morning Runners", emoji: "🏃", members: 24, color: "text-red-400", bg: "bg-red-500/10" },
+    { name: "Code Every Day", emoji: "💻", members: 156, color: "text-primary", bg: "bg-primary/10" },
+    { name: "Learn Spanish", emoji: "🇪🇸", members: 89, color: "text-green-400", bg: "bg-green-500/10" },
 ];
 
 // ============================================
@@ -57,12 +43,8 @@ function AnimatedCounter({ target, suffix = "", duration = 2000 }: { target: num
         const increment = target / (duration / 16);
         const timer = setInterval(() => {
             start += increment;
-            if (start >= target) {
-                setCount(target);
-                clearInterval(timer);
-            } else {
-                setCount(Math.floor(start));
-            }
+            if (start >= target) { setCount(target); clearInterval(timer); }
+            else { setCount(Math.floor(start)); }
         }, 16);
         return () => clearInterval(timer);
     }, [hasStarted, target, duration]);
@@ -70,40 +52,7 @@ function AnimatedCounter({ target, suffix = "", duration = 2000 }: { target: num
     return <>{count}{suffix}</>;
 }
 
-function FloatingEmoji({ emoji, delay, x }: { emoji: string; delay: number; x: number }) {
-    return (
-        <div
-            style={{
-                position: "absolute",
-                left: `${x}%`,
-                top: "100%",
-                fontSize: "24px",
-                opacity: 0.6,
-                animation: `floatUp 4s ease-in-out ${delay}s infinite`,
-                pointerEvents: "none",
-            }}
-        >
-            {emoji}
-        </div>
-    );
-}
-
-function PulsingDot({ color, delay = 0 }: { color: string; delay?: number }) {
-    return (
-        <span
-            style={{
-                display: "inline-block",
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                background: color,
-                animation: `pulse 2s ease-in-out ${delay}s infinite`,
-            }}
-        />
-    );
-}
-
-function TypewriterText({ texts, speed = 50, pause = 3000 }: { texts: string[]; speed?: number, pause?: number }) {
+function TypewriterText({ texts, speed = 50, pause = 3000 }: { texts: string[]; speed?: number; pause?: number }) {
     const [textIndex, setTextIndex] = useState(0);
     const [charIndex, setCharIndex] = useState(0);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -112,18 +61,11 @@ function TypewriterText({ texts, speed = 50, pause = 3000 }: { texts: string[]; 
         const currentText = texts[textIndex];
         const timeout = setTimeout(() => {
             if (!isDeleting) {
-                if (charIndex < currentText.length) {
-                    setCharIndex(charIndex + 1);
-                } else {
-                    setTimeout(() => setIsDeleting(true), pause);
-                }
+                if (charIndex < currentText.length) setCharIndex(charIndex + 1);
+                else setTimeout(() => setIsDeleting(true), pause);
             } else {
-                if (charIndex > 0) {
-                    setCharIndex(charIndex - 1);
-                } else {
-                    setIsDeleting(false);
-                    setTextIndex((textIndex + 1) % texts.length);
-                }
+                if (charIndex > 0) setCharIndex(charIndex - 1);
+                else { setIsDeleting(false); setTextIndex((textIndex + 1) % texts.length); }
             }
         }, isDeleting ? speed / 2 : speed);
         return () => clearTimeout(timeout);
@@ -132,11 +74,7 @@ function TypewriterText({ texts, speed = 50, pause = 3000 }: { texts: string[]; 
     return (
         <span>
             {texts[textIndex].slice(0, charIndex)}
-            <span style={{
-                borderRight: "2px solid currentColor",
-                animation: "blink 0.8s step-end infinite",
-                marginLeft: "2px",
-            }} />
+            <span className="border-r-2 border-current animate-pulse ml-0.5" />
         </span>
     );
 }
@@ -146,72 +84,28 @@ function TypewriterText({ texts, speed = 50, pause = 3000 }: { texts: string[]; 
 // ============================================
 
 function HeroSection({ userCount }: { userCount: number }) {
-    const [hoveredButton, setHoveredButton] = useState<string | null>(null);
-
     return (
-        <section style={{
-            minHeight: "100vh",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "24px",
-            textAlign: "center",
-            position: "relative",
-            overflow: "hidden",
-        }}>
-            {/* Floating emojis background */}
-            {["🎯", "💪", "🚀", "✨", "🔥", "📈", "🏆"].map((emoji, i) => (
-                <FloatingEmoji key={i} emoji={emoji} delay={i * 0.7} x={10 + i * 12} />
-            ))}
-
+        <section className="min-h-screen flex flex-col items-center justify-center px-6 text-center relative overflow-hidden">
             {/* Live counter badge */}
-            <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px 16px",
-                background: `${colors.accent}15`,
-                borderRadius: "24px",
-                border: `1px solid ${colors.accent}30`,
-                marginBottom: "24px",
-                animation: "fadeInDown 0.8s ease",
-            }}>
-                <PulsingDot color={colors.accent} />
-                <span style={{ fontSize: "14px", color: colors.accent, fontWeight: 500 }}>
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 rounded-full border border-green-500/20 mb-6 animate-in fade-in slide-in-from-top-4 duration-700">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-sm text-green-500 font-medium">
                     <AnimatedCounter target={userCount} /> people growing together right now
                 </span>
             </div>
 
             {/* Main headline */}
-            <h1 style={{
-                fontSize: "clamp(36px, 8vw, 72px)",
-                fontWeight: 800,
-                lineHeight: 1.1,
-                letterSpacing: "-2px",
-                marginBottom: "16px",
-                animation: "fadeInUp 0.8s ease 0.2s both",
-            }}>
+            <h1 className="text-[clamp(36px,8vw,72px)] font-extrabold leading-[1.1] tracking-tight mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
                 Stop quitting.<br />
-                <span style={{
-                    background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                }}>
+                <span className="bg-gradient-to-br from-primary to-green-400 bg-clip-text text-transparent">
                     Start finishing.
                 </span>
             </h1>
 
             {/* Dynamic subtitle */}
-            <p style={{
-                fontSize: "clamp(16px, 3vw, 22px)",
-                color: colors.textSecondary,
-                maxWidth: "600px",
-                marginBottom: "8px",
-                animation: "fadeInUp 0.8s ease 0.4s both",
-            }}>
+            <p className="text-[clamp(16px,3vw,22px)] text-muted-foreground max-w-xl mb-2 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
                 Join small accountability groups for{" "}
-                <span style={{ color: colors.primary, fontWeight: 600 }}>
+                <span className="text-primary font-semibold">
                     <TypewriterText
                         texts={["fitness", "studying", "locking in", "getting shredded", "hustling", "self improvement", "shipping apps", "being consistent", "learning languages", "reading books"]}
                         pause={3000}
@@ -219,96 +113,26 @@ function HeroSection({ userCount }: { userCount: number }) {
                 </span>
             </p>
 
-            <p style={{
-                fontSize: "16px",
-                color: colors.textMuted,
-                marginBottom: "32px",
-                animation: "fadeInUp 0.8s ease 0.5s both",
-            }}>
+            <p className="text-sm text-muted-foreground mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
                 Real people. Daily check-ins. No more quitting alone.
             </p>
 
             {/* CTA Buttons */}
-            <div style={{
-                display: "flex",
-                gap: "12px",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                animation: "fadeInUp 0.8s ease 0.6s both",
-            }}>
-                <Link
-                    href="/onboarding"
-                    onMouseEnter={() => setHoveredButton("start")}
-                    onMouseLeave={() => setHoveredButton(null)}
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "16px 32px",
-                        background: hoveredButton === "start"
-                            ? `linear-gradient(135deg, #5B4BD6, ${colors.primary})`
-                            : `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`,
-                        color: "#fff",
-                        borderRadius: "14px",
-                        fontWeight: 600,
-                        fontSize: "16px",
-                        textDecoration: "none",
-                        transition: "all 0.3s ease",
-                        transform: hoveredButton === "start" ? "translateY(-3px) scale(1.02)" : "none",
-                        boxShadow: hoveredButton === "start"
-                            ? `0 12px 40px rgba(108, 92, 231, 0.5)`
-                            : `0 4px 20px rgba(108, 92, 231, 0.3)`,
-                    }}
-                >
-                    Start Free <span style={{ fontSize: "20px" }}>→</span>
-                </Link>
-                <Link
-                    href="/login"
-                    onMouseEnter={() => setHoveredButton("login")}
-                    onMouseLeave={() => setHoveredButton(null)}
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "16px 32px",
-                        background: hoveredButton === "login" ? colors.surface : "transparent",
-                        color: colors.textSecondary,
-                        borderRadius: "14px",
-                        fontWeight: 500,
-                        fontSize: "16px",
-                        textDecoration: "none",
-                        border: `1px solid ${colors.border}`,
-                        transition: "all 0.3s ease",
-                    }}
-                >
-                    Log in
-                </Link>
+            <div className="flex gap-3 flex-wrap justify-center animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
+                <Button asChild size="lg" className="px-8 py-6 text-base font-semibold rounded-xl shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-all hover:-translate-y-0.5">
+                    <Link href="/onboarding">
+                        Start Free <ArrowRight size={18} className="ml-2" />
+                    </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="px-8 py-6 text-base rounded-xl">
+                    <Link href="/login">Log in</Link>
+                </Button>
             </div>
 
             {/* Scroll indicator */}
-            <div style={{
-                position: "absolute",
-                bottom: "32px",
-                left: "50%",
-                transform: "translateX(-50%)",
-                animation: "bounce 2s infinite",
-            }}>
-                <div style={{
-                    width: "24px",
-                    height: "40px",
-                    borderRadius: "12px",
-                    border: `2px solid ${colors.border}`,
-                    display: "flex",
-                    justifyContent: "center",
-                    paddingTop: "8px",
-                }}>
-                    <div style={{
-                        width: "4px",
-                        height: "8px",
-                        borderRadius: "2px",
-                        background: colors.textMuted,
-                        animation: "scrollDown 2s infinite",
-                    }} />
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+                <div className="w-6 h-10 rounded-xl border-2 border-border flex justify-center pt-2">
+                    <div className="w-1 h-2 rounded bg-muted-foreground animate-pulse" />
                 </div>
             </div>
         </section>
@@ -316,67 +140,32 @@ function HeroSection({ userCount }: { userCount: number }) {
 }
 
 function HowItWorksSection() {
-    const [hoveredStep, setHoveredStep] = useState<number | null>(null);
-
     const steps = [
-        { number: "01", emoji: "👥", title: "Join a group", desc: "Find people with your exact goal. Small groups (5-30) mean real connection.", color: colors.primary },
-        { number: "02", emoji: "📝", title: "Check in daily", desc: "Post your progress. Share wins, struggles, questions. Get support.", color: colors.accent },
-        { number: "03", emoji: "🔥", title: "Build your streak", desc: "Your group sees when you're active. Streak = visible consistency.", color: colors.warning },
-        { number: "04", emoji: "🏆", title: "Level up together", desc: "Compete on leaderboards. Celebrate wins. Never feel alone again.", color: colors.danger },
+        { number: "01", emoji: "👥", title: "Join a group", desc: "Find people with your exact goal. Small groups (5-30) mean real connection.", color: "text-primary border-primary" },
+        { number: "02", emoji: "📝", title: "Check in daily", desc: "Post your progress. Share wins, struggles, questions. Get support.", color: "text-green-400 border-green-400" },
+        { number: "03", emoji: "🔥", title: "Build your streak", desc: "Your group sees when you're active. Streak = visible consistency.", color: "text-yellow-400 border-yellow-400" },
+        { number: "04", emoji: "🏆", title: "Level up together", desc: "Compete on leaderboards. Celebrate wins. Never feel alone again.", color: "text-red-400 border-red-400" },
     ];
 
     return (
-        <section style={{ padding: "80px 24px", maxWidth: "1200px", margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: "48px" }}>
-                <h2 style={{ fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 800, marginBottom: "12px" }}>
-                    How it works
-                </h2>
-                <p style={{ color: colors.textSecondary, fontSize: "18px" }}>
-                    4 simple steps to actually finish what you start
-                </p>
+        <section className="py-20 px-6 max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+                <h2 className="text-[clamp(28px,5vw,44px)] font-extrabold mb-3">How it works</h2>
+                <p className="text-muted-foreground text-lg">4 simple steps to actually finish what you start</p>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "24px" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {steps.map((step, i) => (
-                    <div
-                        key={i}
-                        onMouseEnter={() => setHoveredStep(i)}
-                        onMouseLeave={() => setHoveredStep(null)}
-                        style={{
-                            padding: "32px",
-                            background: hoveredStep === i ? colors.surfaceHover : colors.surface,
-                            borderRadius: "20px",
-                            border: `1px solid ${hoveredStep === i ? step.color : colors.border}`,
-                            transition: "all 0.3s ease",
-                            transform: hoveredStep === i ? "translateY(-8px)" : "none",
-                            cursor: "default",
-                        }}
-                    >
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-                            <span style={{
-                                fontSize: "40px",
-                                transition: "transform 0.3s ease",
-                                transform: hoveredStep === i ? "scale(1.2) rotate(10deg)" : "none",
-                            }}>
-                                {step.emoji}
-                            </span>
-                            <span style={{ fontSize: "14px", fontWeight: 700, color: step.color, opacity: 0.7 }}>
-                                {step.number}
-                            </span>
-                        </div>
-                        <h3 style={{
-                            fontSize: "20px",
-                            fontWeight: 700,
-                            marginBottom: "8px",
-                            color: hoveredStep === i ? step.color : colors.textPrimary,
-                            transition: "color 0.3s ease",
-                        }}>
-                            {step.title}
-                        </h3>
-                        <p style={{ fontSize: "14px", color: colors.textSecondary, lineHeight: 1.6 }}>
-                            {step.desc}
-                        </p>
-                    </div>
+                    <Card key={i} className="group hover:-translate-y-2 transition-all duration-300 hover:border-primary/50">
+                        <CardContent className="p-8">
+                            <div className="flex items-center gap-3 mb-4">
+                                <span className="text-4xl group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300">{step.emoji}</span>
+                                <span className={cn("text-sm font-bold opacity-70", step.color.split(" ")[0])}>{step.number}</span>
+                            </div>
+                            <h3 className="text-lg font-bold mb-2 group-hover:text-primary transition-colors">{step.title}</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
         </section>
@@ -388,327 +177,157 @@ function AppPreviewSection() {
     const [isLiked, setIsLiked] = useState(false);
 
     return (
-        <section style={{ padding: "80px 24px", background: colors.surface }}>
-            <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-                <div style={{ textAlign: "center", marginBottom: "48px" }}>
-                    <div style={{
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: colors.primary,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.1em",
-                        marginBottom: "12px",
-                    }}>
-                        What you get
-                    </div>
-                    <h2 style={{ fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 800, marginBottom: "12px" }}>
-                        See the real app
-                    </h2>
-                    <p style={{ color: colors.textSecondary, fontSize: "18px" }}>
-                        Interactive previews of what you&apos;ll use daily
-                    </p>
+        <section className="py-20 px-6 bg-muted/30">
+            <div className="max-w-4xl mx-auto">
+                <div className="text-center mb-12">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">What you get</p>
+                    <h2 className="text-[clamp(28px,5vw,44px)] font-extrabold mb-3">See the real app</h2>
+                    <p className="text-muted-foreground text-lg">Interactive previews of what you&apos;ll use daily</p>
                 </div>
 
                 {/* Tab buttons */}
-                <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "32px", flexWrap: "wrap" }}>
+                <div className="flex justify-center gap-2 mb-8 flex-wrap">
                     {["Groups", "Check-ins", "Streaks"].map((tab, i) => (
-                        <button
+                        <Button
                             key={tab}
                             onClick={() => setActiveTab(i)}
-                            style={{
-                                padding: "12px 24px",
-                                borderRadius: "10px",
-                                border: "none",
-                                background: activeTab === i
-                                    ? `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`
-                                    : colors.bg,
-                                color: activeTab === i ? "#fff" : colors.textSecondary,
-                                fontWeight: 600,
-                                fontSize: "14px",
-                                cursor: "pointer",
-                                transition: "all 0.3s ease",
-                                transform: activeTab === i ? "scale(1.05)" : "none",
-                            }}
+                            variant={activeTab === i ? "default" : "outline"}
+                            size="sm"
+                            className={cn("rounded-lg", activeTab === i && "scale-105")}
                         >
                             {tab}
-                        </button>
+                        </Button>
                     ))}
                 </div>
 
                 {/* Preview content */}
-                <div style={{
-                    background: colors.bg,
-                    borderRadius: "24px",
-                    padding: "32px",
-                    border: `1px solid ${colors.border}`,
-                    minHeight: "400px",
-                }}>
-                    {activeTab === 0 && (
-                        <div style={{ animation: "fadeIn 0.5s ease" }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "20px", color: colors.textSecondary }}>
-                                Find your perfect group
-                            </h3>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                {sampleGroups.map((group, i) => (
-                                    <div
-                                        key={i}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "16px",
-                                            padding: "20px",
-                                            background: colors.surface,
-                                            borderRadius: "16px",
-                                            border: `1px solid ${colors.border}`,
-                                            animation: `fadeInUp 0.5s ease ${i * 0.1}s both`,
-                                            transition: "all 0.3s ease",
-                                            cursor: "pointer",
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.borderColor = group.color;
-                                            e.currentTarget.style.transform = "translateX(8px)";
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.borderColor = colors.border;
-                                            e.currentTarget.style.transform = "none";
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: "56px",
-                                            height: "56px",
-                                            borderRadius: "16px",
-                                            background: `${group.color}20`,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            fontSize: "28px",
-                                        }}>
-                                            {group.emoji}
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: 600, fontSize: "16px", marginBottom: "4px" }}>{group.name}</div>
-                                            <div style={{ fontSize: "13px", color: colors.textMuted }}>{group.members} members • 🔥 Active</div>
-                                        </div>
-                                        <div style={{
-                                            padding: "10px 18px",
-                                            borderRadius: "10px",
-                                            background: `${group.color}20`,
-                                            color: group.color,
-                                            fontSize: "14px",
-                                            fontWeight: 600,
-                                        }}>
-                                            Join
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 1 && (
-                        <div style={{ animation: "fadeIn 0.5s ease" }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "20px", color: colors.textSecondary }}>
-                                Daily check-ins with your group
-                            </h3>
-                            <div style={{
-                                background: colors.surface,
-                                borderRadius: "16px",
-                                border: `1px solid ${colors.border}`,
-                                overflow: "hidden",
-                            }}>
-                                <div style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "12px",
-                                    padding: "16px 20px",
-                                    borderBottom: `1px solid ${colors.border}`,
-                                }}>
-                                    <div style={{
-                                        width: "44px",
-                                        height: "44px",
-                                        borderRadius: "50%",
-                                        background: `${colors.accent}20`,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        fontSize: "22px",
-                                    }}>
-                                        👨‍💻
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600, fontSize: "15px" }}>Alex M.</div>
-                                        <div style={{ fontSize: "12px", color: colors.textMuted }}>Just now • Day 23</div>
-                                    </div>
-                                    <div style={{
-                                        padding: "6px 12px",
-                                        borderRadius: "8px",
-                                        background: `${colors.accent}15`,
-                                        color: colors.accent,
-                                        fontSize: "13px",
-                                        fontWeight: 600,
-                                    }}>
-                                        🔥 23
-                                    </div>
-                                </div>
-                                <div style={{ padding: "20px" }}>
-                                    <p style={{ fontSize: "15px", lineHeight: 1.6, marginBottom: "20px" }}>
-                                        Did a 30 min workout before work! 💪 Small win but staying consistent.
-                                    </p>
-                                    <div style={{ display: "flex", gap: "12px" }}>
-                                        <button
-                                            onClick={() => setIsLiked(!isLiked)}
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "6px",
-                                                padding: "10px 16px",
-                                                borderRadius: "10px",
-                                                background: isLiked ? `${colors.primary}20` : colors.bg,
-                                                border: `1px solid ${isLiked ? colors.primary : colors.border}`,
-                                                color: isLiked ? colors.primary : colors.textSecondary,
-                                                cursor: "pointer",
-                                                fontSize: "14px",
-                                                fontWeight: 500,
-                                                transition: "all 0.2s ease",
-                                                transform: isLiked ? "scale(1.05)" : "none",
-                                            }}
-                                        >
-                                            {isLiked ? "🔥" : "👍"} {isLiked ? "8" : "7"}
-                                        </button>
-                                        <button style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "6px",
-                                            padding: "10px 16px",
-                                            borderRadius: "10px",
-                                            background: colors.bg,
-                                            border: `1px solid ${colors.border}`,
-                                            color: colors.textSecondary,
-                                            cursor: "pointer",
-                                            fontSize: "14px",
-                                            fontWeight: 500,
-                                        }}>
-                                            💬 3
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 2 && (
-                        <div style={{ animation: "fadeIn 0.5s ease" }}>
-                            <h3 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "20px", color: colors.textSecondary }}>
-                                Track your progress
-                            </h3>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                                <div style={{
-                                    background: colors.surface,
-                                    borderRadius: "16px",
-                                    padding: "24px",
-                                    textAlign: "center",
-                                    border: `1px solid ${colors.border}`,
-                                }}>
-                                    <div style={{
-                                        fontSize: "56px",
-                                        fontWeight: 800,
-                                        background: `linear-gradient(135deg, ${colors.primary}, ${colors.accent})`,
-                                        WebkitBackgroundClip: "text",
-                                        WebkitTextFillColor: "transparent",
-                                        marginBottom: "8px",
-                                    }}>
-                                        <AnimatedCounter target={23} />
-                                    </div>
-                                    <div style={{ color: colors.textSecondary, fontWeight: 500 }}>🔥 Day Streak</div>
-                                </div>
-                                <div style={{
-                                    background: colors.surface,
-                                    borderRadius: "16px",
-                                    padding: "12px",
-                                    border: `1px solid ${colors.border}`,
-                                }}>
-                                    <div style={{
-                                        padding: "8px 12px",
-                                        borderBottom: `1px solid ${colors.border}`,
-                                        fontSize: "13px",
-                                        fontWeight: 600,
-                                        color: colors.textMuted,
-                                    }}>
-                                        🏆 Leaderboard
-                                    </div>
-                                    {[
-                                        { rank: 1, name: "Sarah K.", streak: 47 },
-                                        { rank: 2, name: "You", streak: 23 },
-                                        { rank: 3, name: "Marcus", streak: 19 },
-                                    ].map((m, i) => (
+                <Card className="min-h-[400px]">
+                    <CardContent className="p-8">
+                        {activeTab === 0 && (
+                            <div className="animate-in fade-in duration-500">
+                                <h3 className="text-lg font-semibold mb-5 text-muted-foreground">Find your perfect group</h3>
+                                <div className="space-y-3">
+                                    {sampleGroups.map((group, i) => (
                                         <div
                                             key={i}
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "10px",
-                                                padding: "10px 12px",
-                                                background: m.rank === 2 ? `${colors.primary}10` : "transparent",
-                                                borderRadius: "8px",
-                                            }}
+                                            className="flex items-center gap-4 p-5 bg-muted/50 rounded-2xl border border-border hover:border-primary/50 hover:translate-x-2 transition-all cursor-pointer"
                                         >
-                                            <span style={{
-                                                width: "20px",
-                                                height: "20px",
-                                                borderRadius: "50%",
-                                                background: m.rank === 1 ? "#FFD700" : m.rank === 2 ? "#C0C0C0" : "#CD7F32",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                fontSize: "10px",
-                                                fontWeight: 700,
-                                                color: colors.bg,
-                                            }}>
-                                                {m.rank}
-                                            </span>
-                                            <span style={{ flex: 1, fontSize: "13px", fontWeight: m.rank === 2 ? 600 : 400 }}>{m.name}</span>
-                                            <span style={{ fontSize: "12px", color: colors.accent, fontWeight: 600 }}>🔥 {m.streak}</span>
+                                            <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center text-3xl", group.bg)}>
+                                                {group.emoji}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-semibold mb-1">{group.name}</div>
+                                                <div className="text-xs text-muted-foreground">{group.members} members · 🔥 Active</div>
+                                            </div>
+                                            <Badge variant="secondary" className={cn("font-semibold", group.color)}>Join</Badge>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )}
+
+                        {activeTab === 1 && (
+                            <div className="animate-in fade-in duration-500">
+                                <h3 className="text-lg font-semibold mb-5 text-muted-foreground">Daily check-ins with your group</h3>
+                                <Card>
+                                    <CardContent className="p-0">
+                                        <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+                                            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-xl">👨‍💻</div>
+                                            <div className="flex-1">
+                                                <div className="font-semibold text-sm">Alex M.</div>
+                                                <div className="text-xs text-muted-foreground">Just now · Day 23</div>
+                                            </div>
+                                            <Badge variant="secondary" className="text-green-500">🔥 23</Badge>
+                                        </div>
+                                        <div className="p-5">
+                                            <p className="text-sm leading-relaxed mb-5">
+                                                Did a 30 min workout before work! 💪 Small win but staying consistent.
+                                            </p>
+                                            <div className="flex gap-3">
+                                                <button
+                                                    onClick={() => setIsLiked(!isLiked)}
+                                                    className={cn(
+                                                        "flex items-center gap-1.5 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all cursor-pointer",
+                                                        isLiked ? "border-primary bg-primary/10 text-primary scale-105" : "border-border text-muted-foreground"
+                                                    )}
+                                                >
+                                                    {isLiked ? "🔥" : "👍"} {isLiked ? "8" : "7"}
+                                                </button>
+                                                <button className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-muted-foreground cursor-pointer">
+                                                    💬 3
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        )}
+
+                        {activeTab === 2 && (
+                            <div className="animate-in fade-in duration-500">
+                                <h3 className="text-lg font-semibold mb-5 text-muted-foreground">Track your progress</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Card>
+                                        <CardContent className="py-8 text-center">
+                                            <div className="text-5xl font-extrabold bg-gradient-to-br from-primary to-green-400 bg-clip-text text-transparent mb-2">
+                                                <AnimatedCounter target={23} />
+                                            </div>
+                                            <div className="text-muted-foreground font-medium">🔥 Day Streak</div>
+                                        </CardContent>
+                                    </Card>
+                                    <Card>
+                                        <CardContent className="p-0">
+                                            <div className="px-4 py-3 border-b border-border text-xs font-semibold text-muted-foreground">
+                                                🏆 Leaderboard
+                                            </div>
+                                            {[
+                                                { rank: 1, name: "Sarah K.", streak: 47 },
+                                                { rank: 2, name: "You", streak: 23 },
+                                                { rank: 3, name: "Marcus", streak: 19 },
+                                            ].map((m, i) => (
+                                                <div key={i} className={cn("flex items-center gap-2.5 px-4 py-2.5", m.rank === 2 && "bg-primary/5 rounded")}>
+                                                    <span className={cn(
+                                                        "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold",
+                                                        m.rank === 1 ? "bg-yellow-500 text-black" : m.rank === 2 ? "bg-gray-400 text-black" : "bg-amber-700 text-white"
+                                                    )}>
+                                                        {m.rank}
+                                                    </span>
+                                                    <span className={cn("flex-1 text-sm", m.rank === 2 && "font-semibold")}>{m.name}</span>
+                                                    <span className="text-xs text-green-400 font-semibold">🔥 {m.streak}</span>
+                                                </div>
+                                            ))}
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </section>
     );
 }
 
 function StatsSection({ userCount }: { userCount: number }) {
+    const stats = [
+        { value: 92, suffix: "%", label: "of people fail alone", color: "text-red-400" },
+        { value: 65, suffix: "%", label: "more likely to succeed with a partner", color: "text-primary" },
+        { value: 23, suffix: "", label: "average day streak", prefix: "🔥 ", color: "text-green-400" },
+        { value: userCount, suffix: "+", label: "active members", color: "text-violet-400" },
+    ];
+
     return (
-        <section style={{ padding: "80px 24px", maxWidth: "1000px", margin: "0 auto" }}>
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "24px",
-                textAlign: "center",
-            }}>
-                {[
-                    { value: 92, suffix: "%", label: "of people fail alone", color: colors.danger },
-                    { value: 65, suffix: "%", label: "more likely to succeed with a partner", color: colors.primary },
-                    { value: 23, suffix: "", label: "average day streak", prefix: "🔥 ", color: colors.accent },
-                    { value: userCount, suffix: "+", label: "active members", color: colors.primaryLight },
-                ].map((stat, i) => (
-                    <div
-                        key={i}
-                        style={{
-                            padding: "32px 24px",
-                            background: colors.surface,
-                            borderRadius: "20px",
-                            border: `1px solid ${colors.border}`,
-                        }}
-                    >
-                        <div style={{ fontSize: "48px", fontWeight: 800, color: stat.color, marginBottom: "8px" }}>
-                            {stat.prefix}<AnimatedCounter target={stat.value} suffix={stat.suffix} />
-                        </div>
-                        <div style={{ color: colors.textSecondary, fontSize: "14px" }}>{stat.label}</div>
-                    </div>
+        <section className="py-20 px-6 max-w-5xl mx-auto">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+                {stats.map((stat, i) => (
+                    <Card key={i}>
+                        <CardContent className="py-8 px-6">
+                            <div className={cn("text-4xl font-extrabold mb-2", stat.color)}>
+                                {stat.prefix}<AnimatedCounter target={stat.value} suffix={stat.suffix} />
+                            </div>
+                            <div className="text-sm text-muted-foreground">{stat.label}</div>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
         </section>
@@ -719,59 +338,42 @@ function TestimonialsSection() {
     const [activeIndex, setActiveIndex] = useState(0);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            setActiveIndex((prev) => (prev + 1) % testimonials.length);
-        }, 4000);
+        const interval = setInterval(() => setActiveIndex(prev => (prev + 1) % testimonials.length), 4000);
         return () => clearInterval(interval);
     }, []);
 
     return (
-        <section style={{ padding: "80px 24px", background: colors.surface }}>
-            <div style={{ maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
-                <h2 style={{ fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 800, marginBottom: "48px" }}>
-                    This could be you!
-                </h2>
+        <section className="py-20 px-6 bg-muted/30">
+            <div className="max-w-3xl mx-auto text-center">
+                <h2 className="text-[clamp(28px,5vw,44px)] font-extrabold mb-12">This could be you!</h2>
 
-                <div style={{ position: "relative", minHeight: "200px" }}>
+                <div className="relative min-h-[200px]">
                     {testimonials.map((t, i) => (
                         <div
                             key={i}
-                            style={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                opacity: i === activeIndex ? 1 : 0,
-                                transform: i === activeIndex ? "scale(1)" : "scale(0.9)",
-                                transition: "all 0.5s ease",
-                                pointerEvents: i === activeIndex ? "auto" : "none",
-                            }}
+                            className={cn(
+                                "absolute inset-x-0 top-0 transition-all duration-500",
+                                i === activeIndex ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+                            )}
                         >
-                            <div style={{ fontSize: "64px", marginBottom: "16px" }}>{t.avatar}</div>
-                            <p style={{ fontSize: "24px", fontStyle: "italic", marginBottom: "16px", color: colors.textPrimary }}>
-                                &quot;{t.text}&quot;
-                            </p>
-                            <div style={{ color: colors.textSecondary }}>
-                                <strong>{t.name}</strong> • 🔥 {t.streak} day streak
+                            <div className="text-6xl mb-4">{t.avatar}</div>
+                            <p className="text-2xl italic mb-4">&quot;{t.text}&quot;</p>
+                            <div className="text-muted-foreground">
+                                <strong>{t.name}</strong> · 🔥 {t.streak} day streak
                             </div>
                         </div>
                     ))}
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "32px" }}>
+                <div className="flex justify-center gap-2 mt-8">
                     {testimonials.map((_, i) => (
                         <button
                             key={i}
                             onClick={() => setActiveIndex(i)}
-                            style={{
-                                width: i === activeIndex ? "32px" : "10px",
-                                height: "10px",
-                                borderRadius: "5px",
-                                background: i === activeIndex ? colors.primary : colors.border,
-                                border: "none",
-                                cursor: "pointer",
-                                transition: "all 0.3s ease",
-                            }}
+                            className={cn(
+                                "h-2.5 rounded-full transition-all cursor-pointer",
+                                i === activeIndex ? "w-8 bg-primary" : "w-2.5 bg-border"
+                            )}
                         />
                     ))}
                 </div>
@@ -781,58 +383,21 @@ function TestimonialsSection() {
 }
 
 function CTASection() {
-    const [isHovered, setIsHovered] = useState(false);
-
     return (
-        <section style={{ padding: "100px 24px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-            {/* Background glow */}
-            <div style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: "600px",
-                height: "600px",
-                background: `radial-gradient(circle, ${colors.primary}20 0%, transparent 70%)`,
-                pointerEvents: "none",
-            }} />
-
-            <div style={{ position: "relative", zIndex: 1 }}>
-                <h2 style={{ fontSize: "clamp(32px, 6vw, 56px)", fontWeight: 800, marginBottom: "16px", letterSpacing: "-1px" }}>
+        <section className="py-24 px-6 text-center relative overflow-hidden">
+            <div className="relative z-10">
+                <h2 className="text-[clamp(32px,6vw,56px)] font-extrabold mb-4 tracking-tight">
                     Ready to actually finish?
                 </h2>
-                <p style={{ fontSize: "18px", color: colors.textSecondary, marginBottom: "32px", maxWidth: "500px", margin: "0 auto 32px" }}>
+                <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
                     Join thousands who stopped quitting and started growing together.
                 </p>
-                <Link
-                    href="/onboarding"
-                    onMouseEnter={() => setIsHovered(true)}
-                    onMouseLeave={() => setIsHovered(false)}
-                    style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        padding: "20px 48px",
-                        background: isHovered
-                            ? `linear-gradient(135deg, #5B4BD6, ${colors.primary})`
-                            : `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`,
-                        color: "#fff",
-                        borderRadius: "16px",
-                        fontWeight: 700,
-                        fontSize: "18px",
-                        textDecoration: "none",
-                        transition: "all 0.3s ease",
-                        transform: isHovered ? "translateY(-4px) scale(1.02)" : "none",
-                        boxShadow: isHovered
-                            ? `0 20px 60px rgba(108, 92, 231, 0.5)`
-                            : `0 8px 30px rgba(108, 92, 231, 0.3)`,
-                    }}
-                >
-                    Get Started Free <span style={{ fontSize: "22px" }}>🚀</span>
-                </Link>
-                <p style={{ fontSize: "13px", color: colors.textMuted, marginTop: "16px" }}>
-                    No credit card required • Free forever
-                </p>
+                <Button asChild size="lg" className="px-12 py-7 text-lg font-bold rounded-2xl shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all hover:-translate-y-1">
+                    <Link href="/onboarding">
+                        Get Started Free <Rocket size={20} className="ml-2" />
+                    </Link>
+                </Button>
+                <p className="text-xs text-muted-foreground mt-4">No credit card required · Free forever</p>
             </div>
         </section>
     );
@@ -843,71 +408,14 @@ function CTASection() {
 // ============================================
 
 export default function LandingPageClient({ userCount }: { userCount: number }) {
-    // If userCount is 0 or very low (e.g. dev env), show a realistic "starting" number or the actual number if requested
-    // The user specifically asked for "actual number", so we use it. 
-    // But to make it look good if it's 0, we'll ensure at least 1 (the user themselves) or 0 if truly empty.
-    const displayCount = userCount;
-
     return (
-        <div style={{
-            background: colors.bg,
-            color: colors.textPrimary,
-            fontFamily: "var(--font-inter), Inter, -apple-system, sans-serif",
-            minHeight: "100vh",
-        }}>
-            <HeroSection userCount={displayCount} />
+        <div className="bg-background text-foreground min-h-screen">
+            <HeroSection userCount={userCount} />
             <HowItWorksSection />
             <AppPreviewSection />
-            <StatsSection userCount={displayCount} />
+            <StatsSection userCount={userCount} />
             <TestimonialsSection />
             <CTASection />
-
-            {/* Global animations */}
-            <style jsx global>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes fadeInUp {
-                    from { opacity: 0; transform: translateY(20px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                @keyframes fadeInDown {
-                    from { opacity: 0; transform: translateY(-20px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                @keyframes pulse {
-                    0%, 100% { transform: scale(1); opacity: 1; }
-                    50% { transform: scale(1.5); opacity: 0.5; }
-                }
-                @keyframes bounce {
-                    0%, 100% { transform: translateY(0) translateX(-50%); }
-                    50% { transform: translateY(-10px) translateX(-50%); }
-                }
-                @keyframes scrollDown {
-                    0%, 100% { opacity: 1; transform: translateY(0); }
-                    50% { opacity: 0.3; transform: translateY(6px); }
-                }
-                @keyframes floatUp {
-                    0% { opacity: 0; transform: translateY(0) rotate(0deg); }
-                    10% { opacity: 0.6; }
-                    90% { opacity: 0.6; }
-                    100% { opacity: 0; transform: translateY(-400px) rotate(20deg); }
-                }
-                @keyframes blink {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0; }
-                }
-                * {
-                    box-sizing: border-box;
-                }
-                html {
-                    scroll-behavior: smooth;
-                }
-            `}</style>
         </div>
     );
 }
-
-
-

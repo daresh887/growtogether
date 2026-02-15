@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { KeyRound, ArrowLeft, Loader2 } from "lucide-react";
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState("");
@@ -30,141 +35,59 @@ export default function ForgotPasswordPage() {
         }
     };
 
-    const colors = {
-        bg: "#0A0A0B",
-        surface: "#141416",
-        primary: "#6C5CE7",
-        primaryLight: "#A29BFE",
-        textPrimary: "#FFFFFF",
-        textSecondary: "#B8B8C0",
-        border: "#2A2A2E",
-    };
-
     return (
-        <div style={{
-            minHeight: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: colors.bg,
-            color: colors.textPrimary,
-            fontFamily: "var(--font-inter), Inter, sans-serif",
-            padding: "24px",
-        }}>
-            <div style={{
-                width: "100%",
-                maxWidth: "400px",
-                padding: "32px",
-                background: colors.surface,
-                borderRadius: "16px",
-                border: `1px solid ${colors.border}`,
-            }}>
-                <div style={{ fontSize: "48px", marginBottom: "24px", textAlign: "center" }}>
-                    🔑
-                </div>
-
-                <h1 style={{
-                    fontSize: "24px",
-                    fontWeight: 700,
-                    textAlign: "center",
-                    marginBottom: "8px",
-                }}>
-                    Reset Password
-                </h1>
-
-                <p style={{
-                    color: colors.textSecondary,
-                    textAlign: "center",
-                    marginBottom: "32px",
-                    fontSize: "14px",
-                }}>
-                    Enter your email to receive a reset link
-                </p>
-
-                <form onSubmit={handleReset} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    <div>
-                        <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500 }}>
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="you@example.com"
-                            required
-                            style={{
-                                width: "100%",
-                                padding: "12px 16px",
-                                borderRadius: "8px",
-                                border: `1px solid ${colors.border}`,
-                                background: "#000",
-                                color: "#fff",
-                                fontSize: "16px",
-                            }}
-                        />
+        <div className="min-h-screen flex items-center justify-center bg-background p-6">
+            <Card className="w-full max-w-sm">
+                <CardContent className="p-8">
+                    <div className="flex justify-center mb-6">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <KeyRound className="h-6 w-6 text-primary" />
+                        </div>
                     </div>
 
-                    {message && (
-                        <div style={{
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "rgba(0, 217, 165, 0.1)",
-                            border: "1px solid rgba(0, 217, 165, 0.2)",
-                            color: "#00D9A5",
-                            fontSize: "14px",
-                        }}>
-                            {message}
+                    <h1 className="text-2xl font-bold text-center mb-2">Reset Password</h1>
+                    <p className="text-sm text-muted-foreground text-center mb-8">
+                        Enter your email to receive a reset link
+                    </p>
+
+                    <form onSubmit={handleReset} className="space-y-4">
+                        <div>
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                placeholder="you@example.com"
+                                required
+                                className="mt-2"
+                            />
                         </div>
-                    )}
 
-                    {error && (
-                        <div style={{
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "rgba(255, 107, 107, 0.1)",
-                            border: "1px solid rgba(255, 107, 107, 0.2)",
-                            color: "#FF6B6B",
-                            fontSize: "14px",
-                        }}>
-                            {error}
-                        </div>
-                    )}
+                        {message && (
+                            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-500 text-sm">
+                                {message}
+                            </div>
+                        )}
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        style={{
-                            width: "100%",
-                            padding: "14px",
-                            borderRadius: "8px",
-                            border: "none",
-                            background: loading
-                                ? colors.border
-                                : `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`,
-                            color: loading ? colors.textSecondary : "#fff",
-                            fontWeight: 600,
-                            cursor: loading ? "not-allowed" : "pointer",
-                            marginTop: "8px",
-                            transition: "transform 0.1s",
-                        }}
-                    >
-                        {loading ? "Sending..." : "Send Reset Link"}
-                    </button>
-                </form>
+                        {error && (
+                            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                                {error}
+                            </div>
+                        )}
 
-                <div style={{ marginTop: "24px", textAlign: "center", fontSize: "14px" }}>
-                    <Link
-                        href="/login"
-                        style={{
-                            color: colors.textSecondary,
-                            textDecoration: "none",
-                            fontWeight: 500,
-                        }}
-                    >
-                        ← Back to Login
-                    </Link>
-                </div>
-            </div>
+                        <Button type="submit" disabled={loading} className="w-full mt-2">
+                            {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending...</> : "Send Reset Link"}
+                        </Button>
+                    </form>
+
+                    <div className="mt-6 text-center">
+                        <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1">
+                            <ArrowLeft size={12} /> Back to Login
+                        </Link>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }

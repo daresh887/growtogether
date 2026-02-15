@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Check, X, Loader2, PenLine } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ContractModalProps {
     isOpen: boolean;
@@ -12,22 +16,6 @@ interface ContractModalProps {
     rules: string[];
 }
 
-const colors = {
-    bg: "#0A0A0B",
-    surface: "#141416",
-    surfaceHover: "#1A1A1E",
-    border: "#2A2A2E",
-    primary: "#6C5CE7",
-    primaryLight: "#A29BFE",
-    accent: "#00D9A5",
-    accentAlt: "#FF6B6B",
-    gold: "#FFD93D",
-    textPrimary: "#FFFFFF",
-    textSecondary: "#B8B8C0",
-    textMuted: "#6B6B74",
-};
-
-// Particle type for celebration effect
 interface Particle {
     id: number;
     x: number;
@@ -39,7 +27,7 @@ interface Particle {
     rotation: number;
     rotationSpeed: number;
     opacity: number;
-    type: 'confetti' | 'sparkle';
+    type: "confetti" | "sparkle";
 }
 
 export default function ContractModal({
@@ -68,9 +56,9 @@ export default function ContractModal({
             const canvas = canvasRef.current;
             const ctx = canvas.getContext("2d");
             if (ctx) {
-                ctx.fillStyle = "#1a1a1e";
+                ctx.fillStyle = "hsl(var(--muted))";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.strokeStyle = colors.primaryLight;
+                ctx.strokeStyle = "hsl(var(--primary))";
                 ctx.lineWidth = 3;
                 ctx.lineCap = "round";
                 ctx.lineJoin = "round";
@@ -78,12 +66,10 @@ export default function ContractModal({
         }
     }, [isOpen]);
 
-    // Drawing handlers
     const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
         setIsDrawing(true);
         const canvas = canvasRef.current;
         if (!canvas) return;
-
         const rect = canvas.getBoundingClientRect();
         const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
         const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
@@ -92,20 +78,16 @@ export default function ContractModal({
 
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
         if (!isDrawing || !canvasRef.current || !lastPoint.current) return;
-
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
-
         const rect = canvas.getBoundingClientRect();
         const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
         const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-
         ctx.beginPath();
         ctx.moveTo(lastPoint.current.x, lastPoint.current.y);
         ctx.lineTo(x, y);
         ctx.stroke();
-
         lastPoint.current = { x, y };
         setHasSignature(true);
     };
@@ -120,17 +102,15 @@ export default function ContractModal({
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         if (ctx) {
-            ctx.fillStyle = "#1a1a1e";
+            ctx.fillStyle = "hsl(var(--muted))";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
         setHasSignature(false);
     };
 
-    // Celebration particles
     const createParticles = useCallback(() => {
+        const particleColors = ["#6C5CE7", "#A29BFE", "#00D9A5", "#FFD93D", "#FF6B6B"];
         const newParticles: Particle[] = [];
-        const particleColors = [colors.primary, colors.primaryLight, colors.accent, colors.gold, "#FF6B6B", "#FFD93D", "#00D9A5"];
-
         for (let i = 0; i < 80; i++) {
             newParticles.push({
                 id: i,
@@ -143,7 +123,7 @@ export default function ContractModal({
                 rotation: Math.random() * 360,
                 rotationSpeed: (Math.random() - 0.5) * 15,
                 opacity: 1,
-                type: Math.random() > 0.3 ? 'confetti' : 'sparkle',
+                type: Math.random() > 0.3 ? "confetti" : "sparkle",
             });
         }
         return newParticles;
@@ -151,100 +131,59 @@ export default function ContractModal({
 
     const animateParticles = useCallback(() => {
         setParticles(prev => {
-            const updated = prev.map(p => ({
-                ...p,
-                x: p.x + p.vx,
-                y: p.y + p.vy,
-                vy: p.vy + 0.5, // gravity
-                rotation: p.rotation + p.rotationSpeed,
-                opacity: p.opacity - 0.008,
-            })).filter(p => p.opacity > 0);
-
-            if (updated.length > 0) {
-                animationRef.current = requestAnimationFrame(animateParticles);
-            }
+            const updated = prev
+                .map(p => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.5, rotation: p.rotation + p.rotationSpeed, opacity: p.opacity - 0.008 }))
+                .filter(p => p.opacity > 0);
+            if (updated.length > 0) animationRef.current = requestAnimationFrame(animateParticles);
             return updated;
         });
     }, []);
 
-    // Handle sign
     const handleSign = async () => {
         if (!hasSignature || !canvasRef.current) return;
-
         setIsSigning(true);
-
-        // Get signature data
         const signatureData = canvasRef.current.toDataURL("image/png");
-
-        // Trigger celebration
         await new Promise(resolve => setTimeout(resolve, 300));
         setShowCelebration(true);
         setParticles(createParticles());
         animationRef.current = requestAnimationFrame(animateParticles);
-
-        // Show welcome after animation
-        setTimeout(() => {
-            setShowWelcome(true);
-        }, 1500);
-
-        // Complete after celebration
+        setTimeout(() => setShowWelcome(true), 1500);
         setTimeout(() => {
             onSign(signatureData);
-            // Reset states
             setShowCelebration(false);
             setShowWelcome(false);
             setIsSigning(false);
             setHasSignature(false);
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-            }
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
         }, 3500);
     };
 
-    // Cleanup
     useEffect(() => {
-        return () => {
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-            }
-        };
+        return () => { if (animationRef.current) cancelAnimationFrame(animationRef.current); };
     }, []);
 
     if (!isOpen) return null;
 
     return (
         <div
-            style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(0, 0, 0, 0.9)",
-                backdropFilter: "blur(8px)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 10000,
-                fontFamily: "var(--font-inter), Inter, sans-serif",
-                animation: showCelebration ? "celebrationPulse 0.6s ease-out" : undefined,
-            }}
-            onClick={(e) => e.target === e.currentTarget && !isSigning && onClose()}
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[10000]"
+            onClick={e => e.target === e.currentTarget && !isSigning && onClose()}
         >
             {/* Celebration Particles */}
             {showCelebration && (
-                <div style={{ position: "fixed", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
+                <div className="fixed inset-0 pointer-events-none overflow-hidden">
                     {particles.map(p => (
                         <div
                             key={p.id}
+                            className="absolute"
                             style={{
-                                position: "absolute",
-                                left: p.x,
-                                top: p.y,
-                                width: p.size,
-                                height: p.type === 'confetti' ? p.size * 0.6 : p.size,
+                                left: p.x, top: p.y, width: p.size,
+                                height: p.type === "confetti" ? p.size * 0.6 : p.size,
                                 background: p.color,
-                                borderRadius: p.type === 'sparkle' ? "50%" : "2px",
+                                borderRadius: p.type === "sparkle" ? "50%" : "2px",
                                 transform: `rotate(${p.rotation}deg)`,
                                 opacity: p.opacity,
-                                boxShadow: p.type === 'sparkle' ? `0 0 ${p.size}px ${p.color}` : undefined,
+                                boxShadow: p.type === "sparkle" ? `0 0 ${p.size}px ${p.color}` : undefined,
                             }}
                         />
                     ))}
@@ -253,127 +192,42 @@ export default function ContractModal({
 
             {/* Welcome Message */}
             {showWelcome && (
-                <div
-                    style={{
-                        position: "absolute",
-                        inset: 0,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 10001,
-                        animation: "fadeIn 0.5s ease-out",
-                    }}
-                >
-                    <div style={{ fontSize: "120px", marginBottom: "24px", animation: "gentleBounce 0.8s ease-out" }}>
-                        {groupEmoji}
-                    </div>
-                    <h1 style={{
-                        fontSize: "48px",
-                        fontWeight: 800,
-                        background: `linear-gradient(135deg, ${colors.textPrimary}, ${colors.primaryLight})`,
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        marginBottom: "16px",
-                        textAlign: "center",
-                    }}>
+                <div className="absolute inset-0 flex flex-col items-center justify-center z-[10001] animate-in fade-in duration-500">
+                    <div className="text-[120px] mb-6 animate-bounce">{groupEmoji}</div>
+                    <h1 className="text-5xl font-extrabold bg-gradient-to-br from-foreground to-primary bg-clip-text text-transparent mb-4 text-center">
                         Welcome to {groupName}!
                     </h1>
-                    <p style={{ color: colors.textSecondary, fontSize: "20px" }}>
-                        You're officially committed 🔥
-                    </p>
+                    <p className="text-xl text-muted-foreground">You&apos;re officially committed 🔥</p>
                 </div>
             )}
 
             {/* Contract Modal */}
             {!showWelcome && (
-                <div
-                    style={{
-                        background: colors.surface,
-                        borderRadius: "28px",
-                        border: `1px solid ${colors.border}`,
-                        maxWidth: "600px",
-                        width: "90%",
-                        maxHeight: "90vh",
-                        overflow: "auto",
-                        boxShadow: `0 40px 100px rgba(0, 0, 0, 0.5), 0 0 0 1px ${colors.primary}30`,
-                        animation: "slideUp 0.4s ease-out",
-                    }}
-                >
+                <Card className="max-w-xl w-[90%] max-h-[90vh] overflow-auto shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-400">
                     {/* Header */}
-                    <div style={{
-                        padding: "32px 32px 24px",
-                        borderBottom: `1px solid ${colors.border}`,
-                        textAlign: "center",
-                    }}>
-                        <div style={{ fontSize: "56px", marginBottom: "16px" }}>{groupEmoji}</div>
-                        <h2 style={{
-                            fontSize: "28px",
-                            fontWeight: 800,
-                            marginBottom: "8px",
-                            background: `linear-gradient(135deg, ${colors.textPrimary}, ${colors.primaryLight})`,
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                        }}>
+                    <div className="p-8 pb-6 border-b border-border text-center">
+                        <div className="text-6xl mb-4">{groupEmoji}</div>
+                        <h2 className="text-2xl font-extrabold bg-gradient-to-br from-foreground to-primary bg-clip-text text-transparent mb-2">
                             Commitment Contract
                         </h2>
-                        <p style={{ color: colors.textMuted, fontSize: "14px" }}>
-                            By signing below, you agree to hold yourself accountable
-                        </p>
+                        <p className="text-sm text-muted-foreground">By signing below, you agree to hold yourself accountable</p>
                     </div>
 
-                    {/* Contract Content */}
-                    <div style={{ padding: "24px 32px" }}>
+                    <CardContent className="p-8 space-y-6">
                         {/* Main Contract Text */}
-                        <div style={{
-                            background: colors.bg,
-                            border: `1px solid ${colors.border}`,
-                            borderRadius: "16px",
-                            padding: "24px",
-                            marginBottom: "24px",
-                        }}>
-                            <p style={{
-                                fontSize: "16px",
-                                lineHeight: 1.8,
-                                color: colors.textSecondary,
-                                fontStyle: "italic",
-                                margin: 0,
-                            }}>
-                                "{contractText}"
-                            </p>
+                        <div className="bg-muted rounded-2xl p-6 border border-border">
+                            <p className="text-muted-foreground italic leading-relaxed">&quot;{contractText}&quot;</p>
                         </div>
 
                         {/* Rules */}
                         {rules.length > 0 && (
-                            <div style={{ marginBottom: "24px" }}>
-                                <h3 style={{
-                                    fontSize: "14px",
-                                    fontWeight: 700,
-                                    color: colors.textMuted,
-                                    marginBottom: "12px",
-                                    textTransform: "uppercase",
-                                    letterSpacing: "1px",
-                                }}>
-                                    📜 Group Rules I Agree To
-                                </h3>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            <div>
+                                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">📜 Group Rules I Agree To</h3>
+                                <div className="space-y-2">
                                     {rules.map((rule, idx) => (
-                                        <div
-                                            key={idx}
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "flex-start",
-                                                gap: "12px",
-                                                padding: "12px 16px",
-                                                background: colors.bg,
-                                                borderRadius: "12px",
-                                                border: `1px solid ${colors.border}`,
-                                            }}
-                                        >
-                                            <span style={{ color: colors.accent, fontWeight: 700 }}>✓</span>
-                                            <span style={{ fontSize: "14px", color: colors.textSecondary, lineHeight: 1.5 }}>
-                                                {rule}
-                                            </span>
+                                        <div key={idx} className="flex items-start gap-3 p-3 bg-muted rounded-xl border border-border">
+                                            <Check size={14} className="text-green-500 mt-0.5 shrink-0" />
+                                            <span className="text-sm text-muted-foreground leading-relaxed">{rule}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -381,54 +235,19 @@ export default function ContractModal({
                         )}
 
                         {/* Signature Pad */}
-                        <div style={{ marginBottom: "24px" }}>
-                            <div style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                marginBottom: "12px",
-                            }}>
-                                <h3 style={{
-                                    fontSize: "14px",
-                                    fontWeight: 700,
-                                    color: colors.textMuted,
-                                    textTransform: "uppercase",
-                                    letterSpacing: "1px",
-                                }}>
-                                    ✍️ Your Signature
-                                </h3>
+                        <div>
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">✍️ Your Signature</h3>
                                 {hasSignature && (
-                                    <button
-                                        onClick={clearSignature}
-                                        style={{
-                                            background: "transparent",
-                                            border: "none",
-                                            color: colors.accentAlt,
-                                            fontSize: "12px",
-                                            fontWeight: 600,
-                                            cursor: "pointer",
-                                        }}
-                                    >
-                                        Clear
-                                    </button>
+                                    <button onClick={clearSignature} className="text-xs font-semibold text-destructive cursor-pointer hover:underline">Clear</button>
                                 )}
                             </div>
-                            <div style={{
-                                border: `2px dashed ${hasSignature ? colors.accent : colors.border}`,
-                                borderRadius: "16px",
-                                overflow: "hidden",
-                                position: "relative",
-                            }}>
+                            <div className={cn("border-2 border-dashed rounded-2xl overflow-hidden relative", hasSignature ? "border-green-500" : "border-border")}>
                                 <canvas
                                     ref={canvasRef}
                                     width={536}
                                     height={150}
-                                    style={{
-                                        width: "100%",
-                                        height: "150px",
-                                        cursor: "crosshair",
-                                        touchAction: "none",
-                                    }}
+                                    className="w-full h-[150px] cursor-crosshair touch-none"
                                     onMouseDown={startDrawing}
                                     onMouseMove={draw}
                                     onMouseUp={stopDrawing}
@@ -438,16 +257,7 @@ export default function ContractModal({
                                     onTouchEnd={stopDrawing}
                                 />
                                 {!hasSignature && (
-                                    <div style={{
-                                        position: "absolute",
-                                        inset: 0,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        pointerEvents: "none",
-                                        color: colors.textMuted,
-                                        fontSize: "14px",
-                                    }}>
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-sm text-muted-foreground">
                                         Draw your signature here
                                     </div>
                                 )}
@@ -455,75 +265,25 @@ export default function ContractModal({
                         </div>
 
                         {/* Sign Button */}
-                        <button
+                        <Button
                             onClick={handleSign}
                             disabled={!hasSignature || isSigning}
-                            style={{
-                                width: "100%",
-                                padding: "18px 32px",
-                                borderRadius: "16px",
-                                border: "none",
-                                background: hasSignature
-                                    ? `linear-gradient(135deg, ${colors.accent}, #00B894)`
-                                    : colors.border,
-                                color: hasSignature ? "#fff" : colors.textMuted,
-                                fontSize: "18px",
-                                fontWeight: 800,
-                                cursor: hasSignature && !isSigning ? "pointer" : "not-allowed",
-                                transition: "all 0.3s",
-                                boxShadow: hasSignature ? `0 8px 32px ${colors.accent}40` : "none",
-                                animation: hasSignature && !isSigning ? "subtleGlow 2.5s ease-in-out infinite" : undefined,
-                            }}
+                            className={cn("w-full h-14 text-lg font-extrabold rounded-2xl", hasSignature && "bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/30")}
                         >
-                            {isSigning ? "✨ Sealing your commitment..." : "🖊️ Sign & Commit"}
-                        </button>
+                            {isSigning ? (
+                                <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Sealing your commitment...</>
+                            ) : (
+                                <><PenLine size={18} className="mr-2" /> Sign & Commit</>
+                            )}
+                        </Button>
 
                         {/* Cancel */}
-                        <button
-                            onClick={onClose}
-                            disabled={isSigning}
-                            style={{
-                                width: "100%",
-                                padding: "14px",
-                                marginTop: "12px",
-                                background: "transparent",
-                                border: "none",
-                                color: colors.textMuted,
-                                fontSize: "14px",
-                                cursor: isSigning ? "not-allowed" : "pointer",
-                            }}
-                        >
+                        <Button variant="ghost" onClick={onClose} disabled={isSigning} className="w-full text-muted-foreground">
                             Maybe later
-                        </button>
-                    </div>
-                </div>
+                        </Button>
+                    </CardContent>
+                </Card>
             )}
-
-            {/* Animations */}
-            <style jsx global>{`
-                @keyframes slideUp {
-                    from { transform: translateY(50px); opacity: 0; }
-                    to { transform: translateY(0); opacity: 1; }
-                }
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: scale(0.9); }
-                    to { opacity: 1; transform: scale(1); }
-                }
-                @keyframes celebrationPulse {
-                    0% { transform: scale(1); }
-                    30% { transform: scale(1.01); }
-                    100% { transform: scale(1); }
-                }
-                @keyframes gentleBounce {
-                    0% { transform: translateY(20px); opacity: 0; }
-                    50% { transform: translateY(-8px); opacity: 1; }
-                    100% { transform: translateY(0); opacity: 1; }
-                }
-                @keyframes subtleGlow {
-                    0%, 100% { box-shadow: 0 8px 32px rgba(0, 217, 165, 0.3); }
-                    50% { box-shadow: 0 8px 36px rgba(0, 217, 165, 0.5); }
-                }
-            `}</style>
         </div>
     );
 }

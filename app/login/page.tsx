@@ -5,6 +5,12 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Loader2 } from "lucide-react";
 
 function LoginPageContent() {
     const [email, setEmail] = useState("");
@@ -34,7 +40,7 @@ function LoginPageContent() {
                     },
                 });
                 if (error) throw error;
-                setSuccessMessage("Check your email for the confirmation link!");
+                setSuccessMessage("Check your email for the confirmation link.");
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
@@ -56,7 +62,7 @@ function LoginPageContent() {
         setError(null);
         try {
             const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
+                provider: "google",
                 options: {
                     redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
                 },
@@ -68,223 +74,117 @@ function LoginPageContent() {
         }
     };
 
-    const colors = {
-        bg: "#0A0A0B",
-        surface: "#141416",
-        primary: "#6C5CE7",
-        primaryLight: "#A29BFE",
-        textPrimary: "#FFFFFF",
-        textSecondary: "#B8B8C0",
-        border: "#2A2A2E",
-    };
-
     return (
-        <div style={{
-            minHeight: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: colors.bg,
-            color: colors.textPrimary,
-            fontFamily: "var(--font-inter), Inter, sans-serif",
-            padding: "24px",
-        }}>
-            <div style={{
-                width: "100%",
-                maxWidth: "400px",
-                padding: "32px",
-                background: colors.surface,
-                borderRadius: "16px",
-                border: `1px solid ${colors.border}`,
-            }}>
-                <div style={{ fontSize: "48px", marginBottom: "24px", textAlign: "center" }}>
-                    🌱
-                </div>
-
-                <h1 style={{
-                    fontSize: "24px",
-                    fontWeight: 700,
-                    textAlign: "center",
-                    marginBottom: "8px",
-                }}>
-                    {isSignUp ? "Create your account" : "Welcome back"}
-                </h1>
-
-                <p style={{
-                    color: colors.textSecondary,
-                    textAlign: "center",
-                    marginBottom: "32px",
-                    fontSize: "14px",
-                }}>
-                    {isSignUp
-                        ? "Start your journey to consistency today"
-                        : "Continue growing with your tribe"}
-                </p>
-
-                <button
-                    onClick={handleGoogleLogin}
-                    type="button"
-                    disabled={loading}
-                    style={{
-                        width: "100%",
-                        padding: "12px",
-                        marginBottom: "24px",
-                        borderRadius: "8px",
-                        border: `1px solid ${colors.border}`,
-                        background: colors.surface,
-                        color: "#fff",
-                        fontWeight: 500,
-                        cursor: loading ? "not-allowed" : "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "12px",
-                        fontSize: "15px",
-                    }}
-                >
-                    <img src="https://authjs.dev/img/providers/google.svg" alt="Google" style={{ width: "20px", height: "20px" }} />
-                    Continue with Google
-                </button>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
-                    <div style={{ flex: 1, height: "1px", background: colors.border }} />
-                    <span style={{ color: colors.textSecondary, fontSize: "14px" }}>OR</span>
-                    <div style={{ flex: 1, height: "1px", background: colors.border }} />
-                </div>
-
-                <form onSubmit={handleAuth} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    <div>
-                        <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500 }}>
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="you@example.com"
-                            required
-                            style={{
-                                width: "100%",
-                                padding: "12px 16px",
-                                borderRadius: "8px",
-                                border: `1px solid ${colors.border}`,
-                                background: "#000",
-                                color: "#fff",
-                                fontSize: "16px",
-                            }}
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+            <Card className="w-full max-w-sm">
+                <CardHeader className="text-center">
+                    <CardTitle className="text-xl">
+                        {isSignUp ? "Create an account" : "Welcome back"}
+                    </CardTitle>
+                    <CardDescription>
+                        {isSignUp
+                            ? "Start your accountability journey"
+                            : "Sign in to continue"}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button
+                        variant="outline"
+                        className="w-full mb-4"
+                        onClick={handleGoogleLogin}
+                        disabled={loading}
+                    >
+                        <img
+                            src="https://authjs.dev/img/providers/google.svg"
+                            alt=""
+                            className="w-4 h-4 mr-2"
                         />
+                        Continue with Google
+                    </Button>
+
+                    <div className="flex items-center gap-3 mb-4">
+                        <Separator className="flex-1" />
+                        <span className="text-xs text-muted-foreground uppercase">or</span>
+                        <Separator className="flex-1" />
                     </div>
 
-                    <div>
-                        <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500 }}>
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                            required
-                            style={{
-                                width: "100%",
-                                padding: "12px 16px",
-                                borderRadius: "8px",
-                                border: `1px solid ${colors.border}`,
-                                background: "#000",
-                                color: "#fff",
-                                fontSize: "16px",
-                            }}
-                        />
-                        {!isSignUp && (
-                            <div style={{ textAlign: "right", marginTop: "8px" }}>
-                                <Link
-                                    href="/forgot-password"
-                                    style={{
-                                        color: colors.textSecondary,
-                                        fontSize: "13px",
-                                        textDecoration: "none",
-                                    }}
-                                >
-                                    Forgot password?
-                                </Link>
+                    <form onSubmit={handleAuth} className="space-y-3">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="you@example.com"
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                required
+                            />
+                            {!isSignUp && (
+                                <div className="text-right">
+                                    <Link
+                                        href="/forgot-password"
+                                        className="text-xs text-muted-foreground hover:text-foreground"
+                                    >
+                                        Forgot password?
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+
+                        {error && (
+                            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                                {error}
                             </div>
                         )}
-                    </div>
 
-                    {error && (
-                        <div style={{
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "rgba(255, 107, 107, 0.1)",
-                            border: "1px solid rgba(255, 107, 107, 0.2)",
-                            color: "#FF6B6B",
-                            fontSize: "14px",
-                        }}>
-                            {error}
-                        </div>
-                    )}
+                        {successMessage && (
+                            <div className="p-3 rounded-md bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
+                                {successMessage}
+                            </div>
+                        )}
 
-                    {successMessage && (
-                        <div style={{
-                            padding: "12px",
-                            borderRadius: "8px",
-                            background: "rgba(0, 217, 165, 0.1)",
-                            border: "1px solid rgba(0, 217, 165, 0.2)",
-                            color: "#00D9A5",
-                            fontSize: "14px",
-                        }}>
-                            ✓ {successMessage}
-                        </div>
-                    )}
+                        <Button type="submit" className="w-full" disabled={loading}>
+                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isSignUp ? "Sign Up" : "Log In"}
+                        </Button>
+                    </form>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        style={{
-                            width: "100%",
-                            padding: "14px",
-                            borderRadius: "8px",
-                            border: "none",
-                            background: loading
-                                ? colors.border
-                                : `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`,
-                            color: loading ? colors.textSecondary : "#fff",
-                            fontWeight: 600,
-                            cursor: loading ? "not-allowed" : "pointer",
-                            marginTop: "8px",
-                            transition: "transform 0.1s",
-                        }}
-                    >
-                        {loading ? "Loading..." : (isSignUp ? "Sign Up" : "Log In")}
-                    </button>
-                </form>
-
-                <div style={{ marginTop: "24px", textAlign: "center", fontSize: "14px" }}>
-                    <span style={{ color: colors.textSecondary }}>
-                        {isSignUp ? "Already have an account? " : "Don't have an account? "}
-                    </span>
-                    <button
-                        onClick={() => setIsSignUp(!isSignUp)}
-                        style={{
-                            background: "none",
-                            border: "none",
-                            color: colors.primaryLight,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            padding: 0,
-                        }}
-                    >
-                        {isSignUp ? "Log In" : "Sign Up"}
-                    </button>
-                </div>
-            </div>
+                    <p className="mt-4 text-center text-sm text-muted-foreground">
+                        {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+                        <button
+                            onClick={() => setIsSignUp(!isSignUp)}
+                            className="text-foreground font-medium hover:underline cursor-pointer bg-transparent border-none p-0"
+                        >
+                            {isSignUp ? "Log In" : "Sign Up"}
+                        </button>
+                    </p>
+                </CardContent>
+            </Card>
         </div>
     );
 }
 
 export default function LoginPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense
+            fallback={
+                <div className="min-h-screen bg-background flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+            }
+        >
             <LoginPageContent />
         </Suspense>
     );

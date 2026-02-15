@@ -5,20 +5,13 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { uploadProfileImage, updateProfile } from "@/app/actions/profile";
-
-const colors = {
-    bg: "#0A0A0B",
-    surface: "#141416",
-    surfaceHover: "#1A1A1E",
-    border: "#2A2A2E",
-    primary: "#6C5CE7",
-    primaryLight: "#A29BFE",
-    accent: "#00D9A5",
-    textPrimary: "#FFFFFF",
-    textSecondary: "#B8B8C0",
-    textMuted: "#6B6B74",
-    danger: "#FF4757",
-};
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, ArrowRight, Check, Plus, X, Loader2, Camera, Rocket } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const availableAvatars = ["🧑‍💻", "👨‍🎨", "👩‍🔬", "🧑‍🚀", "👨‍🍳", "👩‍🎤", "🧑‍🏫", "👨‍⚕️", "👩‍💼", "🦸", "🧙", "🧛", "🧜‍♀️", "🧚", "🦊", "🐱", "🐶", "🦁", "🐼", "🦄"];
 
@@ -48,7 +41,6 @@ export default function SetupPage() {
     const [uploading, setUploading] = useState(false);
     const [step, setStep] = useState(0);
 
-    // Form state
     const [displayName, setDisplayName] = useState("");
     const [avatar, setAvatar] = useState("🧑‍💻");
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -65,33 +57,21 @@ export default function SetupPage() {
 
     const checkUser = async () => {
         const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) {
-            router.push("/login");
-            return;
-        }
-
-        // Check if already completed
+        if (error || !user) { router.push("/login"); return; }
         const metadata = user.user_metadata || {};
-        if (metadata.profile_complete) {
-            router.push("/dashboard");
-            return;
-        }
-
-        // Pre-fill existing data
+        if (metadata.profile_complete) { router.push("/dashboard"); return; }
         setDisplayName(metadata.display_name || metadata.full_name || "");
         setAvatar(metadata.avatar || "🧑‍💻");
         setAvatarUrl(metadata.avatar_url || null);
         setAvatarType(metadata.avatar_url ? "image" : "emoji");
         setBio(metadata.bio || "");
         setInterests(metadata.interests || []);
-
         setLoading(false);
     };
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
         setUploading(true);
         try {
             const formData = new FormData();
@@ -108,11 +88,7 @@ export default function SetupPage() {
     };
 
     const toggleInterest = (interest: string) => {
-        setInterests(prev =>
-            prev.includes(interest)
-                ? prev.filter(i => i !== interest)
-                : [...prev, interest]
-        );
+        setInterests(prev => prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]);
     };
 
     const addGoal = () => {
@@ -134,16 +110,10 @@ export default function SetupPage() {
                 display_name: displayName,
                 avatar: avatarType === "emoji" ? avatar : undefined,
                 avatar_url: avatarType === "image" ? (avatarUrl || undefined) : undefined,
-                bio: bio,
-                interests: interests,
+                bio, interests,
                 goals: goals.length > 0 ? goals : undefined,
             });
-
-            // Set profile_complete flag (no separate tutorial needed)
-            await supabase.auth.updateUser({
-                data: { profile_complete: true, tutorial_complete: true }
-            });
-
+            await supabase.auth.updateUser({ data: { profile_complete: true, tutorial_complete: true } });
             router.push("/dashboard");
         } catch (err) {
             console.error("Error saving profile:", err);
@@ -154,136 +124,48 @@ export default function SetupPage() {
 
     const canProceed = () => {
         if (step === 0) return displayName.trim().length >= 2;
-        if (step === 1) return true; // Avatar is optional
-        if (step === 2) return true; // Bio is optional
         if (step === 3) return interests.length >= 1;
-        if (step === 4) return true; // Goals are optional
         return true;
     };
 
-    const handleNext = () => {
-        setStep(step + 1);
-    };
-
-    const totalSteps = 6; // Name, Avatar, Bio, Interests, Groups, Preview
+    const totalSteps = 6;
 
     if (!mounted || loading) {
         return (
-            <div style={{
-                minHeight: "100vh",
-                background: colors.bg,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: colors.textPrimary,
-            }}>
-                <div style={{
-                    width: "48px",
-                    height: "48px",
-                    border: `3px solid ${colors.border}`,
-                    borderTopColor: colors.primary,
-                    borderRadius: "50%",
-                    animation: "spin 1s linear infinite",
-                }} />
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
             </div>
         );
     }
 
     return (
-        <div style={{
-            minHeight: "100vh",
-            background: colors.bg,
-            color: colors.textPrimary,
-            fontFamily: "var(--font-inter), Inter, sans-serif",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "24px",
-            position: "relative",
-            overflow: "hidden",
-        }}>
-            {/* Background gradient */}
-            <div style={{
-                position: "absolute",
-                top: "-200px",
-                right: "-200px",
-                width: "600px",
-                height: "600px",
-                background: `radial-gradient(circle, rgba(108, 92, 231, 0.15) 0%, transparent 70%)`,
-                pointerEvents: "none",
-            }} />
-
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
             {/* Hidden file input */}
-            <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                style={{ display: "none" }}
-                onChange={handleFileSelect}
-            />
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleFileSelect} />
 
             {/* Progress bar */}
-            <div style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: "4px",
-                background: colors.border,
-            }}>
-                <div style={{
-                    height: "100%",
-                    width: `${((step + 1) / totalSteps) * 100}%`,
-                    background: `linear-gradient(90deg, ${colors.primary}, ${colors.accent})`,
-                    transition: "width 0.5s ease",
-                }} />
+            <div className="fixed top-0 left-0 right-0 h-1 bg-border z-50">
+                <div className="h-full bg-primary transition-all duration-500" style={{ width: `${((step + 1) / totalSteps) * 100}%` }} />
             </div>
 
             {/* Step indicator */}
-            <div style={{
-                position: "fixed",
-                top: "24px",
-                right: "24px",
-                fontSize: "14px",
-                color: colors.textMuted,
-            }}>
+            <div className="fixed top-6 right-6 text-sm text-muted-foreground">
                 {step + 1} / {totalSteps}
             </div>
 
             {/* Main content */}
-            <div style={{
-                maxWidth: "500px",
-                width: "100%",
-                animation: "fadeIn 0.5s ease",
-            }}>
+            <div className="max-w-md w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
                 {/* Step 0: Name */}
                 {step === 0 && (
-                    <div style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: "48px", marginBottom: "16px" }}>👋</div>
-                        <h1 style={{ fontSize: "32px", fontWeight: 800, marginBottom: "8px" }}>
-                            What should we call you?
-                        </h1>
-                        <p style={{ color: colors.textSecondary, fontSize: "16px", marginBottom: "32px" }}>
-                            This is how you&apos;ll appear to others
-                        </p>
-                        <input
-                            type="text"
+                    <div className="text-center">
+                        <div className="text-5xl mb-4">👋</div>
+                        <h1 className="text-3xl font-bold mb-2">What should we call you?</h1>
+                        <p className="text-muted-foreground mb-8">This is how you&apos;ll appear to others</p>
+                        <Input
                             value={displayName}
-                            onChange={(e) => setDisplayName(e.target.value)}
+                            onChange={e => setDisplayName(e.target.value)}
                             placeholder="Your name"
-                            style={{
-                                width: "100%",
-                                padding: "16px 20px",
-                                borderRadius: "14px",
-                                border: `2px solid ${displayName.trim().length >= 2 ? colors.primary : colors.border}`,
-                                background: colors.surface,
-                                color: colors.textPrimary,
-                                fontSize: "18px",
-                                textAlign: "center",
-                                outline: "none",
-                                transition: "border-color 0.2s",
-                            }}
+                            className="text-center text-lg h-12"
                             autoFocus
                         />
                     </div>
@@ -291,142 +173,70 @@ export default function SetupPage() {
 
                 {/* Step 1: Avatar */}
                 {step === 1 && (
-                    <div style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: "48px", marginBottom: "16px" }}>📸</div>
-                        <h1 style={{ fontSize: "32px", fontWeight: 800, marginBottom: "8px" }}>
-                            Choose your look
-                        </h1>
-                        <p style={{ color: colors.textSecondary, fontSize: "16px", marginBottom: "24px" }}>
-                            Pick an emoji or upload a photo
-                        </p>
+                    <div className="text-center">
+                        <div className="text-5xl mb-4">📸</div>
+                        <h1 className="text-3xl font-bold mb-2">Choose your look</h1>
+                        <p className="text-muted-foreground mb-6">Pick an emoji or upload a photo</p>
 
-                        {/* Avatar type toggle */}
-                        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "24px" }}>
+                        <div className="flex justify-center gap-2 mb-6">
                             <button
                                 onClick={() => setAvatarType("emoji")}
-                                style={{
-                                    padding: "10px 20px",
-                                    borderRadius: "10px",
-                                    border: avatarType === "emoji" ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
-                                    background: avatarType === "emoji" ? `${colors.primary}20` : "transparent",
-                                    color: avatarType === "emoji" ? colors.primaryLight : colors.textSecondary,
-                                    fontSize: "14px",
-                                    fontWeight: 500,
-                                    cursor: "pointer",
-                                }}
+                                className={cn(
+                                    "px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer border-2",
+                                    avatarType === "emoji" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                                )}
                             >
                                 😊 Emoji
                             </button>
                             <button
                                 onClick={() => setAvatarType("image")}
-                                style={{
-                                    padding: "10px 20px",
-                                    borderRadius: "10px",
-                                    border: avatarType === "image" ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
-                                    background: avatarType === "image" ? `${colors.primary}20` : "transparent",
-                                    color: avatarType === "image" ? colors.primaryLight : colors.textSecondary,
-                                    fontSize: "14px",
-                                    fontWeight: 500,
-                                    cursor: "pointer",
-                                }}
+                                className={cn(
+                                    "px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer border-2",
+                                    avatarType === "image" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                                )}
                             >
                                 📷 Photo
                             </button>
                         </div>
 
                         {avatarType === "emoji" ? (
-                            <div style={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                justifyContent: "center",
-                                gap: "8px",
-                            }}>
-                                {availableAvatars.map((emoji) => (
+                            <div className="grid grid-cols-10 gap-2 justify-center">
+                                {availableAvatars.map(emoji => (
                                     <button
                                         key={emoji}
                                         onClick={() => setAvatar(emoji)}
-                                        style={{
-                                            width: "56px",
-                                            height: "56px",
-                                            borderRadius: "14px",
-                                            border: avatar === emoji ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
-                                            background: avatar === emoji ? `${colors.primary}20` : colors.surface,
-                                            fontSize: "28px",
-                                            cursor: "pointer",
-                                            transition: "all 0.2s",
-                                            transform: avatar === emoji ? "scale(1.1)" : "none",
-                                        }}
+                                        className={cn(
+                                            "w-12 h-12 rounded-lg text-2xl flex items-center justify-center border transition-all cursor-pointer",
+                                            avatar === emoji ? "border-primary bg-primary/10 scale-110" : "border-border hover:border-muted-foreground/50"
+                                        )}
                                     >
                                         {emoji}
                                     </button>
                                 ))}
                             </div>
                         ) : (
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+                            <div className="flex flex-col items-center gap-4">
                                 {avatarUrl ? (
                                     <>
-                                        <div style={{
-                                            width: "120px",
-                                            height: "120px",
-                                            borderRadius: "50%",
-                                            overflow: "hidden",
-                                            border: `3px solid ${colors.primary}`,
-                                            boxShadow: `0 0 30px ${colors.primary}40`,
-                                        }}>
-                                            <Image
-                                                src={avatarUrl}
-                                                alt="Profile"
-                                                width={120}
-                                                height={120}
-                                                style={{ objectFit: "cover", width: "100%", height: "100%" }}
-                                            />
+                                        <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-primary">
+                                            <Image src={avatarUrl} alt="Profile" width={120} height={120} className="object-cover w-full h-full" />
                                         </div>
-                                        <button
-                                            onClick={() => fileInputRef.current?.click()}
-                                            style={{
-                                                padding: "10px 20px",
-                                                borderRadius: "10px",
-                                                border: `1px solid ${colors.border}`,
-                                                background: "transparent",
-                                                color: colors.textSecondary,
-                                                fontSize: "14px",
-                                                cursor: "pointer",
-                                            }}
-                                        >
+                                        <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                                             Change photo
-                                        </button>
+                                        </Button>
                                     </>
                                 ) : (
                                     <button
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={uploading}
-                                        style={{
-                                            width: "120px",
-                                            height: "120px",
-                                            borderRadius: "50%",
-                                            border: `2px dashed ${colors.border}`,
-                                            background: colors.surface,
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            gap: "8px",
-                                            cursor: uploading ? "not-allowed" : "pointer",
-                                        }}
+                                        className="w-28 h-28 rounded-full border-2 border-dashed border-border bg-muted flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary transition-colors"
                                     >
                                         {uploading ? (
-                                            <div style={{
-                                                width: "24px",
-                                                height: "24px",
-                                                border: `2px solid ${colors.border}`,
-                                                borderTopColor: colors.primary,
-                                                borderRadius: "50%",
-                                                animation: "spin 1s linear infinite",
-                                            }} />
+                                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
                                         ) : (
                                             <>
-                                                <span style={{ fontSize: "32px" }}>📷</span>
-                                                <span style={{ fontSize: "12px", color: colors.textMuted }}>Upload</span>
+                                                <Camera size={28} className="text-muted-foreground" />
+                                                <span className="text-xs text-muted-foreground">Upload</span>
                                             </>
                                         )}
                                     </button>
@@ -438,86 +248,45 @@ export default function SetupPage() {
 
                 {/* Step 2: Bio */}
                 {step === 2 && (
-                    <div style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: "48px", marginBottom: "16px" }}>✨</div>
-                        <h1 style={{ fontSize: "32px", fontWeight: 800, marginBottom: "8px" }}>
-                            Tell us about yourself
-                        </h1>
-                        <p style={{ color: colors.textSecondary, fontSize: "16px", marginBottom: "32px" }}>
-                            A short bio so others can get to know you
-                        </p>
-                        <div style={{ position: "relative" }}>
-                            <textarea
+                    <div className="text-center">
+                        <div className="text-5xl mb-4">✨</div>
+                        <h1 className="text-3xl font-bold mb-2">Tell us about yourself</h1>
+                        <p className="text-muted-foreground mb-8">A short bio so others can get to know you</p>
+                        <div className="relative">
+                            <Textarea
                                 value={bio}
-                                onChange={(e) => setBio(e.target.value.slice(0, 160))}
+                                onChange={e => setBio(e.target.value.slice(0, 160))}
                                 placeholder="I'm working on becoming more consistent with..."
                                 rows={4}
-                                style={{
-                                    width: "100%",
-                                    padding: "16px 20px",
-                                    borderRadius: "14px",
-                                    border: `2px solid ${colors.border}`,
-                                    background: colors.surface,
-                                    color: colors.textPrimary,
-                                    fontSize: "16px",
-                                    resize: "none",
-                                    outline: "none",
-                                    lineHeight: 1.6,
-                                }}
+                                className="resize-none"
                             />
-                            <span style={{
-                                position: "absolute",
-                                bottom: "12px",
-                                right: "16px",
-                                fontSize: "12px",
-                                color: bio.length > 140 ? colors.danger : colors.textMuted,
-                            }}>
+                            <span className={cn("absolute bottom-3 right-3 text-xs", bio.length > 140 ? "text-destructive" : "text-muted-foreground")}>
                                 {bio.length}/160
                             </span>
                         </div>
-                        <p style={{ color: colors.textMuted, fontSize: "13px", marginTop: "12px" }}>
-                            Optional — you can always add this later
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-3">Optional — you can always add this later</p>
                     </div>
                 )}
 
                 {/* Step 3: Interests */}
                 {step === 3 && (
-                    <div style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: "48px", marginBottom: "16px" }}>🎯</div>
-                        <h1 style={{ fontSize: "32px", fontWeight: 800, marginBottom: "8px" }}>
-                            What are you into?
-                        </h1>
-                        <p style={{ color: colors.textSecondary, fontSize: "16px", marginBottom: "24px" }}>
-                            Select your interests to find the right groups
-                        </p>
-                        <div style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            justifyContent: "center",
-                            gap: "8px",
-                            maxHeight: "350px",
-                            overflowY: "auto",
-                            padding: "8px",
-                        }}>
-                            {availableInterests.map((interest) => {
+                    <div className="text-center">
+                        <div className="text-5xl mb-4">🎯</div>
+                        <h1 className="text-3xl font-bold mb-2">What are you into?</h1>
+                        <p className="text-muted-foreground mb-6">Select your interests to find the right groups</p>
+                        <div className="flex flex-wrap justify-center gap-2 max-h-80 overflow-y-auto p-2">
+                            {availableInterests.map(interest => {
                                 const isSelected = interests.includes(interest);
                                 return (
                                     <button
                                         key={interest}
                                         onClick={() => toggleInterest(interest)}
-                                        style={{
-                                            padding: "10px 16px",
-                                            borderRadius: "20px",
-                                            border: isSelected ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
-                                            background: isSelected ? `${colors.primary}20` : colors.surface,
-                                            color: isSelected ? colors.primaryLight : colors.textSecondary,
-                                            fontSize: "14px",
-                                            fontWeight: 500,
-                                            cursor: "pointer",
-                                            transition: "all 0.2s",
-                                            transform: isSelected ? "scale(1.05)" : "none",
-                                        }}
+                                        className={cn(
+                                            "px-4 py-2.5 rounded-full text-sm font-medium transition-all cursor-pointer border",
+                                            isSelected
+                                                ? "border-primary bg-primary/10 text-primary scale-105"
+                                                : "border-border text-muted-foreground hover:text-foreground"
+                                        )}
                                     >
                                         {interest}
                                     </button>
@@ -525,8 +294,8 @@ export default function SetupPage() {
                             })}
                         </div>
                         {interests.length > 0 && (
-                            <p style={{ color: colors.accent, fontSize: "14px", marginTop: "16px", fontWeight: 500 }}>
-                                {interests.length} selected ✓
+                            <p className="text-sm text-green-500 mt-4 font-medium">
+                                {interests.length} selected <Check size={12} className="inline" />
                             </p>
                         )}
                     </div>
@@ -534,270 +303,110 @@ export default function SetupPage() {
 
                 {/* Step 4: Goals */}
                 {step === 4 && (
-                    <div style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: "48px", marginBottom: "16px" }}>🎯</div>
-                        <h1 style={{ fontSize: "32px", fontWeight: 800, marginBottom: "8px" }}>
-                            What are you working towards?
-                        </h1>
-                        <p style={{ color: colors.textSecondary, fontSize: "16px", marginBottom: "24px" }}>
-                            Add up to 5 goals you&apos;re working on
-                        </p>
+                    <div className="text-center">
+                        <div className="text-5xl mb-4">🎯</div>
+                        <h1 className="text-3xl font-bold mb-2">What are you working towards?</h1>
+                        <p className="text-muted-foreground mb-6">Add up to 5 goals you&apos;re working on</p>
 
-                        {/* Goal input */}
-                        <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
-                            <input
-                                type="text"
+                        <div className="flex gap-2 mb-4">
+                            <Input
                                 value={goalInput}
-                                onChange={(e) => setGoalInput(e.target.value.slice(0, 80))}
-                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addGoal(); } }}
+                                onChange={e => setGoalInput(e.target.value.slice(0, 80))}
+                                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addGoal(); } }}
                                 placeholder="e.g. Run a marathon, Learn Spanish..."
-                                style={{
-                                    flex: 1,
-                                    padding: "14px 18px",
-                                    borderRadius: "14px",
-                                    border: `2px solid ${colors.border}`,
-                                    background: colors.surface,
-                                    color: colors.textPrimary,
-                                    fontSize: "15px",
-                                    outline: "none",
-                                }}
+                                className="flex-1"
                             />
-                            <button
-                                onClick={addGoal}
-                                disabled={!goalInput.trim() || goals.length >= 5}
-                                style={{
-                                    padding: "14px 20px",
-                                    borderRadius: "14px",
-                                    border: "none",
-                                    background: goalInput.trim() && goals.length < 5
-                                        ? colors.primary
-                                        : colors.surfaceHover,
-                                    color: goalInput.trim() && goals.length < 5
-                                        ? "#fff"
-                                        : colors.textMuted,
-                                    fontSize: "15px",
-                                    fontWeight: 600,
-                                    cursor: goalInput.trim() && goals.length < 5 ? "pointer" : "not-allowed",
-                                }}
-                            >
-                                Add
-                            </button>
+                            <Button onClick={addGoal} disabled={!goalInput.trim() || goals.length >= 5}>
+                                <Plus size={14} className="mr-1" /> Add
+                            </Button>
                         </div>
 
-                        {/* Goal chips */}
                         {goals.length > 0 && (
-                            <div style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: "10px",
-                                marginBottom: "16px",
-                            }}>
+                            <div className="space-y-2 mb-4">
                                 {goals.map((goal, idx) => (
-                                    <div
-                                        key={idx}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "12px",
-                                            padding: "12px 16px",
-                                            background: colors.surface,
-                                            border: `1px solid ${colors.border}`,
-                                            borderRadius: "14px",
-                                            textAlign: "left",
-                                        }}
-                                    >
-                                        <span style={{ color: colors.accent, fontWeight: 700, fontSize: "16px" }}>🎯</span>
-                                        <span style={{ flex: 1, fontSize: "15px", color: colors.textSecondary, lineHeight: 1.4 }}>
-                                            {goal}
-                                        </span>
-                                        <button
-                                            onClick={() => removeGoal(goal)}
-                                            style={{
-                                                background: "transparent",
-                                                border: "none",
-                                                color: colors.textMuted,
-                                                fontSize: "18px",
-                                                cursor: "pointer",
-                                                padding: "4px",
-                                                lineHeight: 1,
-                                            }}
-                                        >
-                                            ×
+                                    <div key={idx} className="flex items-center gap-3 p-3 bg-muted rounded-lg text-left">
+                                        <span className="text-green-500 font-bold">🎯</span>
+                                        <span className="flex-1 text-sm text-muted-foreground">{goal}</span>
+                                        <button onClick={() => removeGoal(goal)} className="text-muted-foreground hover:text-destructive cursor-pointer">
+                                            <X size={14} />
                                         </button>
                                     </div>
                                 ))}
                             </div>
                         )}
-
-                        <p style={{ color: colors.textMuted, fontSize: "13px", marginTop: "12px" }}>
-                            Optional — you can always add these later
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-3">Optional — you can always add these later</p>
                     </div>
                 )}
 
                 {/* Step 5: Preview */}
                 {step === 5 && (
-                    <div style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: "48px", marginBottom: "16px" }}>🎉</div>
-                        <h1 style={{ fontSize: "32px", fontWeight: 800, marginBottom: "8px" }}>
-                            Looking good!
-                        </h1>
-                        <p style={{ color: colors.textSecondary, fontSize: "16px", marginBottom: "32px" }}>
-                            Here&apos;s your profile preview
-                        </p>
+                    <div className="text-center">
+                        <div className="text-5xl mb-4">🎉</div>
+                        <h1 className="text-3xl font-bold mb-2">Looking good!</h1>
+                        <p className="text-muted-foreground mb-8">Here&apos;s your profile preview</p>
 
-                        {/* Profile card preview */}
-                        <div style={{
-                            background: colors.surface,
-                            border: `1px solid ${colors.border}`,
-                            borderRadius: "24px",
-                            padding: "32px",
-                            textAlign: "center",
-                        }}>
-                            {avatarType === "image" && avatarUrl ? (
-                                <div style={{
-                                    width: "100px",
-                                    height: "100px",
-                                    borderRadius: "50%",
-                                    overflow: "hidden",
-                                    border: `3px solid ${colors.primary}`,
-                                    margin: "0 auto 16px",
-                                    boxShadow: `0 0 30px ${colors.primary}40`,
-                                }}>
-                                    <Image src={avatarUrl} alt="Profile" width={100} height={100} style={{ objectFit: "cover", width: "100%", height: "100%" }} />
-                                </div>
-                            ) : (
-                                <div style={{
-                                    width: "100px",
-                                    height: "100px",
-                                    borderRadius: "50%",
-                                    background: `linear-gradient(135deg, ${colors.primary}30, ${colors.primaryLight}30)`,
-                                    border: `3px solid ${colors.primary}`,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: "48px",
-                                    margin: "0 auto 16px",
-                                    boxShadow: `0 0 30px ${colors.primary}40`,
-                                }}>
-                                    {avatar}
-                                </div>
-                            )}
-                            <h2 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "8px" }}>{displayName}</h2>
-                            {bio && <p style={{ color: colors.textSecondary, fontSize: "14px", marginBottom: "16px", lineHeight: 1.5 }}>{bio}</p>}
-                            {interests.length > 0 && (
-                                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "6px" }}>
-                                    {interests.slice(0, 6).map((interest) => (
-                                        <span key={interest} style={{
-                                            padding: "6px 12px",
-                                            borderRadius: "12px",
-                                            background: `${colors.primary}15`,
-                                            color: colors.primaryLight,
-                                            fontSize: "12px",
-                                        }}>
-                                            {interest}
-                                        </span>
-                                    ))}
-                                    {interests.length > 6 && (
-                                        <span style={{
-                                            padding: "6px 12px",
-                                            borderRadius: "12px",
-                                            background: colors.surfaceHover,
-                                            color: colors.textMuted,
-                                            fontSize: "12px",
-                                        }}>
-                                            +{interests.length - 6}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-                            {goals.length > 0 && (
-                                <div style={{ marginTop: "16px" }}>
-                                    <p style={{ color: colors.textMuted, fontSize: "12px", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px" }}>
-                                        Goals
-                                    </p>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                                        {goals.map((goal, idx) => (
-                                            <div key={idx} style={{
-                                                padding: "8px 14px",
-                                                borderRadius: "10px",
-                                                background: `${colors.accent}10`,
-                                                color: colors.accent,
-                                                fontSize: "13px",
-                                                textAlign: "left",
-                                                display: "flex",
-                                                gap: "8px",
-                                                alignItems: "center",
-                                            }}>
-                                                <span>🎯</span> {goal}
-                                            </div>
-                                        ))}
+                        <Card>
+                            <CardContent className="p-8 text-center">
+                                {avatarType === "image" && avatarUrl ? (
+                                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primary mx-auto mb-4">
+                                        <Image src={avatarUrl} alt="Profile" width={100} height={100} className="object-cover w-full h-full" />
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                ) : (
+                                    <div className="w-24 h-24 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center text-5xl mx-auto mb-4">
+                                        {avatar}
+                                    </div>
+                                )}
+                                <h2 className="text-xl font-bold mb-2">{displayName}</h2>
+                                {bio && <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{bio}</p>}
+                                {interests.length > 0 && (
+                                    <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+                                        {interests.slice(0, 6).map(interest => (
+                                            <Badge key={interest} variant="secondary" className="text-xs">{interest}</Badge>
+                                        ))}
+                                        {interests.length > 6 && (
+                                            <Badge variant="outline" className="text-xs">+{interests.length - 6}</Badge>
+                                        )}
+                                    </div>
+                                )}
+                                {goals.length > 0 && (
+                                    <div className="mt-4">
+                                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Goals</p>
+                                        <div className="space-y-1.5">
+                                            {goals.map((goal, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 text-green-500 text-xs text-left">
+                                                    <span>🎯</span> {goal}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
                 )}
 
                 {/* Navigation buttons */}
-                <div style={{ display: "flex", gap: "12px", marginTop: "32px" }}>
+                <div className="flex gap-3 mt-8">
                     {step > 0 && (
-                        <button
-                            onClick={() => setStep(step - 1)}
-                            style={{
-                                padding: "16px 24px",
-                                borderRadius: "14px",
-                                border: `1px solid ${colors.border}`,
-                                background: "transparent",
-                                color: colors.textSecondary,
-                                fontSize: "16px",
-                                fontWeight: 500,
-                                cursor: "pointer",
-                            }}
-                        >
-                            Back
-                        </button>
+                        <Button variant="outline" onClick={() => setStep(step - 1)}>
+                            <ArrowLeft size={14} className="mr-1" /> Back
+                        </Button>
                     )}
-                    <button
-                        onClick={() => {
-                            if (step < totalSteps - 1) {
-                                handleNext();
-                            } else {
-                                handleComplete();
-                            }
-                        }}
+                    <Button
+                        className="flex-1"
+                        onClick={() => { step < totalSteps - 1 ? setStep(step + 1) : handleComplete(); }}
                         disabled={!canProceed() || saving}
-                        style={{
-                            flex: 1,
-                            padding: "16px 32px",
-                            borderRadius: "14px",
-                            border: "none",
-                            background: canProceed()
-                                ? `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`
-                                : colors.surfaceHover,
-                            color: canProceed() ? "#fff" : colors.textMuted,
-                            fontSize: "16px",
-                            fontWeight: 600,
-                            cursor: canProceed() && !saving ? "pointer" : "not-allowed",
-                            transition: "all 0.3s",
-                            boxShadow: canProceed() ? `0 4px 20px ${colors.primary}40` : "none",
-                        }}
                     >
-                        {saving ? "Saving..." : step === totalSteps - 1 ? "Go to Dashboard 🚀" : "Continue →"}
-                    </button>
+                        {saving ? (
+                            <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Saving...</>
+                        ) : step === totalSteps - 1 ? (
+                            <><Rocket size={14} className="mr-1" /> Go to Dashboard</>
+                        ) : (
+                            <>Continue <ArrowRight size={14} className="ml-1" /></>
+                        )}
+                    </Button>
                 </div>
             </div>
-
-            {/* Global styles */}
-            <style jsx global>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
         </div>
     );
 }
