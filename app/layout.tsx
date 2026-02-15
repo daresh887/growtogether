@@ -10,7 +10,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://growtogether-jp9p.vercel.app"),
-  title: "GrowTogether — Accountability groups that work",
+  title: "GrowTogether",
   description: "Join small groups of real people working toward the same goals. Stay consistent with daily check-ins and streaks.",
 };
 

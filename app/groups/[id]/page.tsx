@@ -1,6 +1,6 @@
 "use client";
 
-import { getGroup, joinGroup, leaveGroup, createPost, getGroupPosts, toggleReaction, addComment, getLeaderboard, deletePost, getGroupMembers, cheerMember, setGroupChallenge, clearGroupChallenge } from "@/app/actions/groups";
+import { getGroup, joinGroup, leaveGroup, createPost, getGroupPosts, toggleReaction, addComment, deleteComment, getLeaderboard, deletePost, getGroupMembers, cheerMember, setGroupChallenge, clearGroupChallenge } from "@/app/actions/groups";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -36,6 +36,7 @@ import {
     List,
     Send,
     FileText,
+    Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ImageViewer from "@/components/ImageViewer";
@@ -479,7 +480,7 @@ export default function GroupDetailPage() {
                             </div>
 
                             <div className="flex items-center gap-2 shrink-0">
-                                {(userRole === "owner" || userRole === "moderator") && (
+                                {isOwner && (
                                     <Button variant="outline" size="icon" onClick={() => setShowSettingsModal(true)}>
                                         <Settings size={16} />
                                     </Button>
@@ -488,6 +489,20 @@ export default function GroupDetailPage() {
                                     <Badge variant="secondary" className="gap-1 py-1.5 px-3">
                                         <Crown size={12} /> Owner
                                     </Badge>
+                                ) : userRole === "moderator" ? (
+                                    <>
+                                        <Badge variant="secondary" className="gap-1 py-1.5 px-3 border-blue-500/30 bg-blue-500/10 text-blue-400">
+                                            <Shield size={12} /> Moderator
+                                        </Badge>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleJoinToggle}
+                                            disabled={joinLoading}
+                                        >
+                                            {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Leave"}
+                                        </Button>
+                                    </>
                                 ) : (
                                     <Button
                                         variant={isMember ? "outline" : "default"}
@@ -922,7 +937,7 @@ export default function GroupDetailPage() {
                                                         className={cn(
                                                             "px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 transition-colors cursor-pointer border",
                                                             post.userReactions?.includes("❤️")
-                                                                ? "border-primary/50 bg-primary/10 text-foreground"
+                                                                ? "border-red-500/50 bg-red-500/10 text-red-500"
                                                                 : "border-border text-muted-foreground hover:border-muted-foreground/50"
                                                         )}
                                                     >
@@ -945,7 +960,7 @@ export default function GroupDetailPage() {
                                                 {expandedComments.has(post.id) && (
                                                     <div className="mt-4 pt-4 border-t border-border">
                                                         {post.comments?.map((c: any) => (
-                                                            <div key={c.id} className="flex gap-2.5 mb-3">
+                                                            <div key={c.id} className="flex gap-2.5 mb-3 group/comment">
                                                                 <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center text-xs shrink-0 overflow-hidden">
                                                                     {c.userAvatar ? (
                                                                         <img src={c.userAvatar} alt="" className="w-full h-full object-cover" />
@@ -953,10 +968,27 @@ export default function GroupDetailPage() {
                                                                         <span className="text-sm">{c.userEmoji || c.userName?.charAt(0)?.toUpperCase()}</span>
                                                                     )}
                                                                 </div>
-                                                                <div>
+                                                                <div className="flex-1 min-w-0">
                                                                     <div className="flex items-center gap-2 mb-0.5">
                                                                         <span className="font-semibold text-xs">{c.userName}</span>
                                                                         <span className="text-xs text-muted-foreground">{formatTime(c.createdAt)}</span>
+                                                                        {(userRole === "owner" || userRole === "moderator" || c.userId === group?.currentUserId) && (
+                                                                            <button
+                                                                                onClick={async () => {
+                                                                                    try {
+                                                                                        await deleteComment(c.id, groupId);
+                                                                                        const refreshed = await getGroupPosts(groupId, { sortBy, timeFrame });
+                                                                                        setPosts(refreshed);
+                                                                                    } catch (e: any) {
+                                                                                        setToast({ message: e.message || "Failed to delete comment", type: "error" });
+                                                                                    }
+                                                                                }}
+                                                                                className="opacity-0 group-hover/comment:opacity-100 p-0.5 rounded text-muted-foreground/50 hover:text-destructive transition-all cursor-pointer"
+                                                                                title="Delete comment"
+                                                                            >
+                                                                                <Trash2 size={11} />
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                     <p className="text-xs text-muted-foreground leading-relaxed">{c.content}</p>
                                                                 </div>

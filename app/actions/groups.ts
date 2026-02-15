@@ -761,6 +761,70 @@ export async function addComment(postId: string, content: string, groupId: strin
     return { success: true };
 }
 
+/**
+ * Delete a comment (allowed for comment author, group owner, or moderator)
+ */
+export async function deleteComment(commentId: string, groupId: string) {
+    const supabase = await createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) throw new Error("Unauthorized");
+
+    // Get the comment to check ownership
+    const { data: comment } = await supabase
+        .from("post_comments")
+        .select("user_id")
+        .eq("id", commentId)
+        .single();
+
+    if (!comment) throw new Error("Comment not found");
+
+    // Check if user is the comment author
+    const isAuthor = comment.user_id === user.id;
+
+    // Check if user is the group owner or moderator
+    let canModerate = false;
+    if (!isAuthor) {
+        const { data: group } = await supabase
+            .from("groups")
+            .select("created_by")
+            .eq("id", groupId)
+            .single();
+
+        const isGroupOwner = group?.created_by === user.id;
+
+        if (!isGroupOwner) {
+            const { data: membership } = await supabase
+                .from("group_members")
+                .select("role")
+                .eq("group_id", groupId)
+                .eq("user_id", user.id)
+                .single();
+
+            canModerate = membership?.role === "moderator";
+        } else {
+            canModerate = true;
+        }
+    }
+
+    if (!isAuthor && !canModerate) {
+        throw new Error("You don't have permission to delete this comment");
+    }
+
+    const { error } = await supabase
+        .from("post_comments")
+        .delete()
+        .eq("id", commentId);
+
+    if (error) {
+        console.error("Error deleting comment:", error);
+        throw new Error("Failed to delete comment");
+    }
+
+    revalidatePath(`/groups/${groupId}`);
+    return { success: true };
+}
+
 // ============================================
 // ADMIN & MODERATOR MANAGEMENT
 // ============================================
@@ -796,12 +860,13 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
         throw new Error("Group not found");
     }
 
-    // Fetch members without relying on FK join (which can fail if FK is missing/ambiguous)
+    // Fetch members without FK join (avoids ambiguous FK issues)
+    // created_at doesn't exist on group_members, so we remove it.
     const { data: members, error } = await supabase
         .from("group_members")
-        .select("user_id, role, streak_count, created_at")
+        .select("user_id, role, streak_count")
         .eq("group_id", groupId)
-        .order("created_at", { ascending: true });
+        .order("streak_count", { ascending: false });
 
     if (error) {
         console.error("Error fetching members:", error);
@@ -835,7 +900,7 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
             userEmoji: profile?.avatar || "🧑‍💻",
             role: m.user_id === group.created_by ? "owner" : (m.role === "moderator" ? "moderator" : "member"),
             streak: m.streak_count || 0,
-            joinedAt: m.created_at,
+            joinedAt: new Date().toISOString(), // Fallback since we don't have joined_at
         };
     });
 }

@@ -395,6 +395,15 @@ export default function GroupSettingsModal({
 
                     <TabsContent value="members" className="space-y-4">
                         <div className="space-y-4">
+                            {/* Moderator info for admin */}
+                            {isAdmin && (
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 text-xs text-blue-400">
+                                    <Shield size={14} className="shrink-0 mt-0.5" />
+                                    <div>
+                                        <span className="font-semibold">About Moderators:</span> Moderators can delete posts and comments but <span className="font-semibold">cannot</span> access group settings, manage members, or modify the group.
+                                    </div>
+                                </div>
+                            )}
                             {membersLoading ? (
                                 <div className="text-center py-10 text-muted-foreground flex items-center justify-center gap-2">
                                     <Loader2 className="h-5 w-5 animate-spin" /> Loading members...
