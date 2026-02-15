@@ -24,6 +24,7 @@ import {
     Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ImageViewer from "@/components/ImageViewer";
 
 const MOODS = [
     { emoji: "🔥", label: "Crushing it!" },
@@ -72,6 +73,9 @@ export default function ProfilePage() {
     const [posts, setPosts] = useState<UserPost[]>([]);
     const [hoveredAchievement, setHoveredAchievement] = useState<string | null>(null);
     const [isOwnProfile, setIsOwnProfile] = useState(false);
+    const [viewerOpen, setViewerOpen] = useState(false);
+    const [viewerImages, setViewerImages] = useState<string[]>([]);
+    const [viewerIndex, setViewerIndex] = useState(0);
 
     useEffect(() => {
         setMounted(true);
@@ -270,7 +274,7 @@ export default function ProfilePage() {
                                             "relative p-4 rounded-lg border text-center cursor-pointer transition-all",
                                             achievement.earned
                                                 ? "border-yellow-500/30 bg-yellow-500/5"
-                                                : "border-border bg-muted opacity-50 grayscale"
+                                                : "border-border bg-muted grayscale"
                                         )}
                                     >
                                         <div className="text-2xl mb-2">{achievement.emoji}</div>
@@ -401,7 +405,16 @@ export default function ProfilePage() {
                                             <div className={cn("grid gap-2 mb-4 rounded-lg overflow-hidden", post.images.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
                                                 {post.images.slice(0, 4).map((img: string, i: number) => (
                                                     <div key={i} className="relative" style={{ paddingTop: post.images.length === 1 ? "56.25%" : "100%" }}>
-                                                        <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover cursor-pointer" onClick={() => window.open(img, "_blank")} />
+                                                        <img
+                                                            src={img}
+                                                            alt=""
+                                                            className="absolute inset-0 w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                                            onClick={() => {
+                                                                setViewerImages(post.images);
+                                                                setViewerIndex(i);
+                                                                setViewerOpen(true);
+                                                            }}
+                                                        />
                                                         {i === 3 && post.images.length > 4 && (
                                                             <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xl font-semibold">
                                                                 +{post.images.length - 4}
@@ -428,6 +441,13 @@ export default function ProfilePage() {
                     )}
                 </div>
             </main>
+
+            <ImageViewer
+                isOpen={viewerOpen}
+                onClose={() => setViewerOpen(false)}
+                images={viewerImages}
+                initialIndex={viewerIndex}
+            />
         </div>
     );
 }

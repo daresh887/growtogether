@@ -56,9 +56,13 @@ export default function ContractModal({
             const canvas = canvasRef.current;
             const ctx = canvas.getContext("2d");
             if (ctx) {
-                ctx.fillStyle = "hsl(var(--muted))";
+                const styles = getComputedStyle(document.documentElement);
+                const mutedColor = styles.getPropertyValue("--muted").trim();
+                const primaryColor = styles.getPropertyValue("--primary").trim();
+
+                ctx.fillStyle = mutedColor || "#333";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.strokeStyle = "hsl(var(--primary))";
+                ctx.strokeStyle = primaryColor || "#fff";
                 ctx.lineWidth = 3;
                 ctx.lineCap = "round";
                 ctx.lineJoin = "round";
@@ -102,7 +106,9 @@ export default function ContractModal({
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         if (ctx) {
-            ctx.fillStyle = "hsl(var(--muted))";
+            const styles = getComputedStyle(document.documentElement);
+            const mutedColor = styles.getPropertyValue("--muted").trim();
+            ctx.fillStyle = mutedColor || "#333";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
         setHasSignature(false);

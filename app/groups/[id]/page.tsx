@@ -38,6 +38,7 @@ import {
     FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ImageViewer from "@/components/ImageViewer";
 
 const REACTIONS = ["👍", "❤️", "🔥", "💪", "🎉"];
 
@@ -138,6 +139,9 @@ export default function GroupDetailPage() {
     const [pendingImages, setPendingImages] = useState<File[]>([]);
     const [currentCropIndex, setCurrentCropIndex] = useState(0);
     const cropContainerRef = useRef<HTMLDivElement>(null);
+    const [viewerOpen, setViewerOpen] = useState(false);
+    const [viewerImages, setViewerImages] = useState<string[]>([]);
+    const [viewerIndex, setViewerIndex] = useState(0);
 
     // Confirmation Dialog State
     const [confirmPostDelete, setConfirmPostDelete] = useState(false);
@@ -894,8 +898,12 @@ export default function GroupDetailPage() {
                                                             <div key={i} className="relative" style={{ paddingTop: post.images.length === 1 ? "56.25%" : "100%" }}>
                                                                 <img
                                                                     src={img} alt=""
-                                                                    className="absolute inset-0 w-full h-full object-cover cursor-pointer"
-                                                                    onClick={() => window.open(img, "_blank")}
+                                                                    className="absolute inset-0 w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                                                    onClick={() => {
+                                                                        setViewerImages(post.images);
+                                                                        setViewerIndex(i);
+                                                                        setViewerOpen(true);
+                                                                    }}
                                                                 />
                                                                 {i === 3 && post.images.length > 4 && (
                                                                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xl font-semibold">
@@ -1234,6 +1242,13 @@ export default function GroupDetailPage() {
                     setGroup(updated);
                     setConfirmEndChallenge(false);
                 }}
+            />
+
+            <ImageViewer
+                isOpen={viewerOpen}
+                onClose={() => setViewerOpen(false)}
+                images={viewerImages}
+                initialIndex={viewerIndex}
             />
 
             {/* Image Cropper Modal */}

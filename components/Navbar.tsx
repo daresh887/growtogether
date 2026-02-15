@@ -44,8 +44,8 @@ export default function Navbar() {
             {/* Desktop Side Rail */}
             <nav className="fixed left-0 top-0 bottom-0 w-[4.5rem] hidden lg:flex flex-col items-center py-5 bg-card border-r border-border z-50">
                 {/* Brand */}
-                <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold mb-6">
-                    G
+                <div className="w-8 h-8 flex items-center justify-center text-2xl mb-6 hover:scale-110 transition-transform cursor-default">
+                    🚀
                 </div>
 
                 {/* Nav Items */}
