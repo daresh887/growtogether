@@ -20,10 +20,10 @@ const CATEGORIES = [
     { id: "learning", label: "Learning", emoji: "📚", color: "#4ECDC4" },
     { id: "coding", label: "Coding", emoji: "💻", color: "#6C5CE7" },
     { id: "art", label: "Art", emoji: "🎨", color: "#FD79A8" },
+    { id: "hustling", label: "Hustling", emoji: "💰", color: "#0984E3" },
     { id: "writing", label: "Writing", emoji: "✍️", color: "#00B894" },
     { id: "music", label: "Music", emoji: "🎵", color: "#E17055" },
-    { id: "business", label: "Business", emoji: "💼", color: "#0984E3" },
-    { id: "wellness", label: "Wellness", emoji: "🧘", color: "#00D9A5" },
+    { id: "self-improvement", label: "Self Improvement", emoji: "🧘", color: "#00D9A5" },
     { id: "other", label: "Other", emoji: "🎯", color: "#A29BFE" },
 ];
 

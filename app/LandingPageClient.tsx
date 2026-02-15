@@ -103,7 +103,7 @@ function PulsingDot({ color, delay = 0 }: { color: string; delay?: number }) {
     );
 }
 
-function TypewriterText({ texts, speed = 50 }: { texts: string[]; speed?: number }) {
+function TypewriterText({ texts, speed = 50, pause = 3000 }: { texts: string[]; speed?: number, pause?: number }) {
     const [textIndex, setTextIndex] = useState(0);
     const [charIndex, setCharIndex] = useState(0);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -115,7 +115,7 @@ function TypewriterText({ texts, speed = 50 }: { texts: string[]; speed?: number
                 if (charIndex < currentText.length) {
                     setCharIndex(charIndex + 1);
                 } else {
-                    setTimeout(() => setIsDeleting(true), 2000);
+                    setTimeout(() => setIsDeleting(true), pause);
                 }
             } else {
                 if (charIndex > 0) {
@@ -127,7 +127,7 @@ function TypewriterText({ texts, speed = 50 }: { texts: string[]; speed?: number
             }
         }, isDeleting ? speed / 2 : speed);
         return () => clearTimeout(timeout);
-    }, [charIndex, isDeleting, textIndex, texts, speed]);
+    }, [charIndex, isDeleting, textIndex, texts, speed, pause]);
 
     return (
         <span>
@@ -212,7 +212,10 @@ function HeroSection({ userCount }: { userCount: number }) {
             }}>
                 Join small accountability groups for{" "}
                 <span style={{ color: colors.primary, fontWeight: 600 }}>
-                    <TypewriterText texts={["fitness", "coding", "learning", "creativity", "wellness"]} />
+                    <TypewriterText
+                        texts={["fitness", "studying", "locking in", "getting shredded", "hustling", "self improvement", "shipping apps", "being consistent", "learning languages", "reading books"]}
+                        pause={3000}
+                    />
                 </span>
             </p>
 

@@ -55,7 +55,7 @@ const interests = [
     { id: "art", emoji: "🎨", label: "Art" },
     { id: "writing", emoji: "✍️", label: "Writing" },
     { id: "music", emoji: "🎵", label: "Music" },
-    { id: "business", emoji: "💼", label: "Business" },
+    { id: "hustling", emoji: "🚀", label: "Hustling" },
     { id: "mindfulness", emoji: "🧘", label: "Wellness" },
     { id: "languages", emoji: "🌍", label: "Languages" },
     { id: "reading", emoji: "📖", label: "Reading" },

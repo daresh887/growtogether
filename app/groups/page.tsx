@@ -9,13 +9,13 @@ import Navbar from "@/components/Navbar";
 const CATEGORIES = [
     { id: "all", label: "All", emoji: "🌟" },
     { id: "fitness", label: "Fitness", emoji: "💪" },
-    { id: "learning", label: "Learning", emoji: "📚" },
+    { id: "studying", label: "Studying", emoji: "📚" },
     { id: "coding", label: "Coding", emoji: "💻" },
+    { id: "hustling", label: "Hustling", emoji: "🚀" },
     { id: "art", label: "Art", emoji: "🎨" },
     { id: "writing", label: "Writing", emoji: "✍️" },
     { id: "music", label: "Music", emoji: "🎵" },
-    { id: "business", label: "Business", emoji: "💼" },
-    { id: "wellness", label: "Wellness", emoji: "🧘" },
+    { id: "self-improvement", label: "Self Improvement", emoji: "🧘" },
 ];
 
 import { colors } from "@/utils/design-tokens";
