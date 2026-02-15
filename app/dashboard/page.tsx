@@ -109,7 +109,7 @@ export default function DashboardPage() {
                     {stats && stats.currentStreak > 0 && (
                         <p className="text-sm text-muted-foreground mt-1">
                             You're on a{" "}
-                            <span className="text-foreground font-medium">
+                            <span className="text-primary font-semibold">
                                 {stats.currentStreak}-day streak
                             </span>
                             . Keep it up.
@@ -144,8 +144,8 @@ export default function DashboardPage() {
                     ].map((stat) => (
                         <Card key={stat.label}>
                             <CardContent className="p-4 flex items-center gap-3">
-                                <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center">
-                                    <stat.icon size={16} className="text-muted-foreground" />
+                                <div className="h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center">
+                                    <stat.icon size={16} className="text-primary" />
                                 </div>
                                 <div>
                                     <p className="text-xl font-semibold leading-none">
@@ -167,7 +167,7 @@ export default function DashboardPage() {
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-3 gap-3 mb-8">
-                    <Button variant="secondary" className="h-auto py-4 flex-col gap-1" asChild>
+                    <Button className="h-auto py-4 flex-col gap-1" asChild>
                         <Link href="/groups">
                             <Search size={18} />
                             <span className="text-xs font-medium">Explore</span>
@@ -231,8 +231,8 @@ export default function DashboardPage() {
                                                 </p>
                                             </div>
                                             {group.yourStreak > 0 && (
-                                                <Badge variant="secondary" className="text-xs">
-                                                    {group.yourStreak}d streak
+                                                <Badge className="text-xs bg-primary/10 text-primary border-primary/20">
+                                                    🔥 {group.yourStreak}d
                                                 </Badge>
                                             )}
                                         </Link>

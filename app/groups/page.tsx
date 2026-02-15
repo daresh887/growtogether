@@ -126,7 +126,7 @@ export default function GroupsPage() {
                                     className={cn(
                                         "px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors cursor-pointer",
                                         selectedCategory === cat.id
-                                            ? "bg-foreground text-background"
+                                            ? "bg-primary text-primary-foreground"
                                             : "bg-muted text-muted-foreground hover:text-foreground"
                                     )}
                                 >
@@ -148,7 +148,7 @@ export default function GroupsPage() {
                                         className={cn(
                                             "px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer",
                                             sortBy === opt.value
-                                                ? "bg-foreground text-background"
+                                                ? "bg-primary text-primary-foreground"
                                                 : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
@@ -247,7 +247,7 @@ export default function GroupsPage() {
                                             </Badge>
                                             {group.recentPostCount > 0 && (
                                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                    <TrendingUp size={11} />
+                                                    <TrendingUp size={11} className="text-primary" />
                                                     {group.recentPostCount} recent
                                                 </span>
                                             )}

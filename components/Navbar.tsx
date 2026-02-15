@@ -42,9 +42,9 @@ export default function Navbar() {
     return (
         <>
             {/* Desktop Side Rail */}
-            <nav className="fixed left-0 top-0 bottom-0 w-16 hidden lg:flex flex-col items-center py-5 bg-card border-r border-border z-50">
+            <nav className="fixed left-0 top-0 bottom-0 w-[4.5rem] hidden lg:flex flex-col items-center py-5 bg-card border-r border-border z-50">
                 {/* Brand */}
-                <div className="w-8 h-8 rounded-lg bg-foreground text-background flex items-center justify-center text-sm font-bold mb-6">
+                <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold mb-6">
                     G
                 </div>
 
@@ -59,12 +59,12 @@ export default function Navbar() {
                                 href={item.href}
                                 title={item.label}
                                 className={cn(
-                                    "w-12 flex flex-col items-center gap-0.5 py-2.5 rounded-md text-muted-foreground transition-colors",
-                                    active && "text-foreground bg-accent"
+                                    "w-14 flex flex-col items-center gap-0.5 py-2.5 rounded-md text-muted-foreground transition-colors",
+                                    active && "text-primary bg-primary/10"
                                 )}
                             >
                                 <Icon size={18} strokeWidth={active ? 2 : 1.5} />
-                                <span className={cn("text-[10px]", active ? "font-semibold" : "font-medium")}>
+                                <span className={cn("text-[10px] whitespace-nowrap", active ? "font-semibold" : "font-medium")}>
                                     {item.label}
                                 </span>
                             </Link>
@@ -76,7 +76,7 @@ export default function Navbar() {
                 <button
                     onClick={handleLogout}
                     title="Log out"
-                    className="w-12 flex flex-col items-center gap-0.5 py-2.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                    className="w-14 flex flex-col items-center gap-0.5 py-2.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                 >
                     <LogOut size={18} strokeWidth={1.5} />
                     <span className="text-[10px] font-medium">Log out</span>
@@ -94,11 +94,11 @@ export default function Navbar() {
                             href={item.href}
                             className={cn(
                                 "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-md text-muted-foreground transition-colors",
-                                active && "text-foreground bg-accent"
+                                active && "text-primary bg-primary/10"
                             )}
                         >
                             <Icon size={18} strokeWidth={active ? 2 : 1.5} />
-                            <span className={cn("text-[10px]", active ? "font-semibold" : "font-medium")}>
+                            <span className={cn("text-[10px] whitespace-nowrap", active ? "font-semibold" : "font-medium")}>
                                 {item.label}
                             </span>
                         </Link>

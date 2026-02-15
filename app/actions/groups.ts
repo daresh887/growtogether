@@ -1137,7 +1137,7 @@ export async function deleteGroup(groupId: string) {
 
     const postIds = posts?.map(p => p.id) || [];
 
-    // Delete all related data
+    // Delete children first: reactions → comments → posts → members
     if (postIds.length > 0) {
         await supabase.from("post_reactions").delete().in("post_id", postIds);
         await supabase.from("post_comments").delete().in("post_id", postIds);
@@ -1145,15 +1145,30 @@ export async function deleteGroup(groupId: string) {
     await supabase.from("posts").delete().eq("group_id", groupId);
     await supabase.from("group_members").delete().eq("group_id", groupId);
 
-    // Finally delete the group
-    const { error } = await supabase
+    // Delete the group itself
+    const { error: deleteError } = await supabase
         .from("groups")
         .delete()
         .eq("id", groupId);
 
-    if (error) {
-        console.error("Error deleting group:", error);
-        throw new Error("Failed to delete group");
+    if (deleteError) {
+        console.error("Error deleting group:", deleteError);
+        throw new Error(`Failed to delete group: ${deleteError.message}`);
+    }
+
+    // Verify the group was actually deleted (RLS can silently block deletes)
+    const { data: stillExists } = await supabase
+        .from("groups")
+        .select("id")
+        .eq("id", groupId)
+        .single();
+
+    if (stillExists) {
+        console.error("Group still exists after delete — likely blocked by RLS policy");
+        throw new Error(
+            "Failed to delete group: missing database permission. " +
+            "Please run the add_delete_policies.sql migration in your Supabase SQL editor."
+        );
     }
 
     revalidatePath("/groups");
