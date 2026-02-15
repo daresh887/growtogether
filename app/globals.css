@@ -91,6 +91,8 @@ body {
 
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(circle at top center, color-mix(in srgb, var(--background), white 5%), var(--background));
+    min-height: 100dvh;
   }
 }
 

@@ -115,7 +115,7 @@ export default function TutorialPage() {
                         <div className="text-7xl mb-6">👋</div>
                         <h1 className="text-4xl font-bold mb-4">Welcome, {userName}!</h1>
                         <p className="text-lg text-muted-foreground mb-4 leading-relaxed">
-                            Let&apos;s take a quick tour of how GrowTogether works.
+                            Let&apos;s take a quick tour of how LockIn Buddy works.
                         </p>
                         <p className="text-green-500 font-medium">It only takes 1 minute ⚡</p>
                     </div>

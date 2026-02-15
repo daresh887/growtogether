@@ -1,5 +1,5 @@
 /**
- * GrowTogether Design Tokens
+ * LockIn Buddy Design Tokens
  * Single source of truth for all visual properties.
  *
  * Palette rationale: warm neutrals + a vibrant teal accent.

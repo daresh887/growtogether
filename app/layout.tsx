@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -9,9 +9,16 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://growtogether-jp9p.vercel.app"),
-  title: "GrowTogether",
+  metadataBase: new URL("https://lockinbuddy.com"),
+  title: "LockIn Buddy",
   description: "Join small groups of real people working toward the same goals. Stay consistent with daily check-ins and streaks.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#0F0F13", // Matches the dark background
 };
 
 export default function RootLayout({

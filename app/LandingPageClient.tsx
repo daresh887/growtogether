@@ -90,7 +90,7 @@ function HeroSection({ userCount }: { userCount: number }) {
             <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 rounded-full border border-green-500/20 mb-6 animate-in fade-in slide-in-from-top-4 duration-700">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-sm text-green-500 font-medium">
-                    <AnimatedCounter target={userCount} /> people growing together right now
+                    <AnimatedCounter target={userCount} /> people locking in right now
                 </span>
             </div>
 
@@ -398,7 +398,7 @@ function CTASection() {
                     Ready to actually finish?
                 </h2>
                 <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
-                    Join thousands who stopped quitting and started growing together.
+                    Join thousands who stopped quitting and started locking in.
                 </p>
                 <Button asChild size="lg" className="px-12 py-7 text-lg font-bold rounded-2xl shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all hover:-translate-y-1">
                     <Link href="/onboarding">
