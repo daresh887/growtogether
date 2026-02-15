@@ -45,7 +45,7 @@ const interests = [
     { id: "writing", emoji: "✍️", label: "Writing" },
     { id: "music", emoji: "🎵", label: "Music" },
     { id: "hustling", emoji: "🚀", label: "Hustling" },
-    { id: "mindfulness", emoji: "🧘", label: "Self Improvement" },
+    { id: "self-improvement", emoji: "🧘", label: "Self Improvement" },
     { id: "languages", emoji: "🌍", label: "Languages" },
     { id: "reading", emoji: "📖", label: "Reading" },
     { id: "cooking", emoji: "🍳", label: "Cooking" },
@@ -163,8 +163,8 @@ function DraggableSliderScreen({ onNext, value, onChange }: { onNext: () => void
                 >
                     <div className="h-full rounded-full" style={{ width: `${value}%`, background: "linear-gradient(90deg, #FF6B6B, #FFEAA7, #00D9A5)", transition: isDragging ? "none" : "width 0.1s" }} />
                     <div
-                        className="absolute top-1/2 -translate-y-1/2 w-9 h-9 bg-white rounded-full border-4 border-primary"
-                        style={{ left: `${value}%`, transform: "translate(-50%, -50%)", boxShadow: isDragging ? "0 4px 20px rgba(0,0,0,0.5)" : "0 2px 10px rgba(0,0,0,0.3)", cursor: isDragging ? "grabbing" : "grab", transition: isDragging ? "none" : "left 0.1s" }}
+                        className="absolute w-8 h-8 bg-white rounded-full border-4 border-primary"
+                        style={{ left: `${value}%`, top: "50%", transform: "translate(-50%, -50%)", boxShadow: isDragging ? "0 4px 20px rgba(0,0,0,0.5)" : "0 2px 10px rgba(0,0,0,0.3)", cursor: isDragging ? "grabbing" : "grab", transition: isDragging ? "none" : "left 0.1s" }}
                     />
                 </div>
                 <div className="flex justify-between mt-4 text-sm text-muted-foreground font-medium">
