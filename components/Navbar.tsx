@@ -7,6 +7,7 @@ import {
     Home,
     Compass,
     Users,
+    Handshake,
     User,
     Settings,
     LogOut,
@@ -17,6 +18,7 @@ const navItems = [
     { href: "/dashboard", label: "Home", icon: Home },
     { href: "/groups", label: "Explore", icon: Compass },
     { href: "/my-groups", label: "My Groups", icon: Users },
+    { href: "/buddies", label: "Buddy", icon: Handshake },
     { href: "/profile", label: "Profile", icon: User },
     { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
