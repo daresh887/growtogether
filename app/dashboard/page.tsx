@@ -15,6 +15,8 @@ import {
     type ActivityItem,
     type ProfileData,
 } from "@/app/actions/profile";
+import { getMyBuddies, getMyBuddyProfile, type BuddyPairSummary } from "@/app/actions/buddies";
+import { ONBOARDING_PREFS_KEY } from "@/utils/buddy-constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,7 @@ import {
     FolderOpen,
     ArrowRight,
     Loader2,
+    Handshake,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -38,6 +41,8 @@ export default function DashboardPage() {
     const [stats, setStats] = useState<UserStats | null>(null);
     const [groups, setGroups] = useState<UserGroup[]>([]);
     const [activity, setActivity] = useState<ActivityItem[]>([]);
+    const [buddies, setBuddies] = useState<BuddyPairSummary[]>([]);
+    const [buddyNudge, setBuddyNudge] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -62,13 +67,25 @@ export default function DashboardPage() {
                 }
             }
 
-            const [profileData, statsData, groupsData, activityData] =
+            const [profileData, statsData, groupsData, activityData, buddiesData, buddyProfile] =
                 await Promise.all([
                     getProfile(),
                     getUserStats(),
                     getUserGroups(),
                     getActivityFeed(5),
+                    getMyBuddies().catch(() => []),
+                    getMyBuddyProfile().catch(() => null),
                 ]);
+
+            setBuddies(buddiesData);
+            // Nudge users who asked for a 1:1 buddy in onboarding but never set up matching
+            if (buddiesData.length === 0 && !buddyProfile) {
+                try {
+                    const raw = localStorage.getItem(ONBOARDING_PREFS_KEY);
+                    const prefs = raw ? JSON.parse(raw) : null;
+                    setBuddyNudge(prefs?.mode === "buddy" || prefs?.mode === "both");
+                } catch { /* no prefs — no nudge */ }
+            }
 
             if (!profileData) {
                 router.push("/login");
@@ -164,6 +181,47 @@ export default function DashboardPage() {
                         </Card>
                     ))}
                 </div>
+
+                {/* Buddy */}
+                {buddies.length > 0 ? (
+                    <Link href={`/buddies/${buddies[0].id}`}>
+                        <Card className="mb-8 border-amber-500/30 hover:border-amber-400/60 transition-colors cursor-pointer">
+                            <CardContent className="p-4 flex items-center gap-3.5">
+                                <div className="h-10 w-10 rounded-full bg-muted border border-border flex items-center justify-center overflow-hidden text-xl shrink-0">
+                                    {buddies[0].partner.avatarUrl
+                                        ? <img src={buddies[0].partner.avatarUrl} alt={buddies[0].partner.displayName} className="w-full h-full object-cover" />
+                                        : buddies[0].partner.avatarEmoji}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold">
+                                        <span className="text-amber-400">🤝 Buddy:</span> {buddies[0].partner.displayName}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {buddies[0].checkedInToday
+                                            ? "You've checked in today — nice."
+                                            : "You haven't checked in with them today."}
+                                    </p>
+                                </div>
+                                <ArrowRight size={16} className="text-muted-foreground shrink-0" />
+                            </CardContent>
+                        </Card>
+                    </Link>
+                ) : buddyNudge ? (
+                    <Link href="/buddies">
+                        <Card className="mb-8 border-amber-500/30 hover:border-amber-400/60 transition-colors cursor-pointer">
+                            <CardContent className="p-4 flex items-center gap-3.5">
+                                <div className="h-10 w-10 rounded-md bg-amber-500/10 flex items-center justify-center shrink-0">
+                                    <Handshake size={18} className="text-amber-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold">You wanted a 1:1 accountability buddy</p>
+                                    <p className="text-xs text-muted-foreground">Set up matching — it takes under a minute.</p>
+                                </div>
+                                <ArrowRight size={16} className="text-muted-foreground shrink-0" />
+                            </CardContent>
+                        </Card>
+                    </Link>
+                ) : null}
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-3 gap-3 mb-8">

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Rocket } from "lucide-react";
+import { ArrowRight, Rocket, Users, Handshake, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ============================================
@@ -104,7 +104,7 @@ function HeroSection({ userCount }: { userCount: number }) {
 
             {/* Dynamic subtitle */}
             <p className="text-[clamp(16px,3vw,22px)] text-muted-foreground max-w-xl mb-2 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-                Join small accountability groups for{" "}
+                Join a group or match with a <span className="text-amber-400 font-semibold">1:1 buddy</span> for{" "}
                 <span className="text-primary font-semibold">
                     <TypewriterText
                         texts={["fitness", "studying", "locking in", "getting shredded", "hustling", "self improvement", "shipping apps", "being consistent", "learning languages", "reading books"]}
@@ -141,7 +141,7 @@ function HeroSection({ userCount }: { userCount: number }) {
 
 function HowItWorksSection() {
     const steps = [
-        { number: "01", emoji: "👥", title: "Join a group", desc: "Find people with your exact goal. Small groups (5-30) mean real connection.", color: "text-primary border-primary" },
+        { number: "01", emoji: "👥", title: "Pick your people", desc: "Join a small group (5-30) with your exact goal — or get matched with a 1:1 buddy.", color: "text-primary border-primary" },
         { number: "02", emoji: "📝", title: "Check in daily", desc: "Post your progress. Share wins, struggles, questions. Get support.", color: "text-green-400 border-green-400" },
         { number: "03", emoji: "🔥", title: "Build your streak", desc: "Your group sees when you're active. Streak = visible consistency.", color: "text-yellow-400 border-yellow-400" },
         { number: "04", emoji: "🏆", title: "Level up together", desc: "Compete on leaderboards. Celebrate wins. Never feel alone again.", color: "text-red-400 border-red-400" },
@@ -167,6 +167,89 @@ function HowItWorksSection() {
                         </CardContent>
                     </Card>
                 ))}
+            </div>
+        </section>
+    );
+}
+
+function TwoWaysSection() {
+    return (
+        <section className="py-20 px-6 bg-muted/30">
+            <div className="max-w-5xl mx-auto">
+                <div className="text-center mb-12">
+                    <p className="text-xs font-semibold text-amber-400 uppercase tracking-widest mb-3">Choose your accountability</p>
+                    <h2 className="text-[clamp(28px,5vw,44px)] font-extrabold mb-3">
+                        A crowd behind you,<br className="sm:hidden" /> or one person beside you?
+                    </h2>
+                    <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+                        Two very different kinds of accountability. Pick one — or stack both.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Groups */}
+                    <Card className="border-primary/30 hover:border-primary/60 transition-colors overflow-hidden">
+                        <div className="h-1.5 bg-primary" />
+                        <CardContent className="p-8 flex flex-col h-full">
+                            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+                                <Users size={28} className="text-primary" />
+                            </div>
+                            <h3 className="text-2xl font-extrabold mb-1">Accountability Groups</h3>
+                            <p className="text-sm text-muted-foreground mb-6">5–30 people chasing the same goal, together.</p>
+                            <ul className="space-y-3 mb-8 flex-1">
+                                {[
+                                    "A shared feed of daily check-ins",
+                                    "Leaderboards, streaks & group challenges",
+                                    "Energy of a whole community behind you",
+                                ].map((item, i) => (
+                                    <li key={i} className="flex items-start gap-2.5 text-sm">
+                                        <Check size={16} className="text-primary mt-0.5 shrink-0" />
+                                        <span>{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <p className="text-xs text-muted-foreground mb-5">Best if you feed off group energy and friendly competition.</p>
+                            <Button asChild size="lg" className="w-full rounded-xl font-semibold">
+                                <Link href="/onboarding">Find your group <ArrowRight size={16} className="ml-2" /></Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* 1:1 Buddy */}
+                    <Card className="border-amber-500/30 hover:border-amber-400/60 transition-colors overflow-hidden">
+                        <div className="h-1.5 bg-amber-400" />
+                        <CardContent className="p-8 flex flex-col h-full">
+                            <div className="flex items-start justify-between">
+                                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-5">
+                                    <Handshake size={28} className="text-amber-400" />
+                                </div>
+                                <Badge variant="outline" className="text-amber-400 border-amber-500/30 bg-amber-500/10">New</Badge>
+                            </div>
+                            <h3 className="text-2xl font-extrabold mb-1">1:1 Accountability Buddy</h3>
+                            <p className="text-sm text-muted-foreground mb-6">One matched partner who notices when you go quiet.</p>
+                            <ul className="space-y-3 mb-8 flex-1">
+                                {[
+                                    "Matched on your goals, rhythm & style",
+                                    "Private mutual check-ins, just you two",
+                                    "Paired streaks — if you skip, they see it",
+                                ].map((item, i) => (
+                                    <li key={i} className="flex items-start gap-2.5 text-sm">
+                                        <Check size={16} className="text-amber-400 mt-0.5 shrink-0" />
+                                        <span>{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <p className="text-xs text-muted-foreground mb-5">Best if you want depth over noise — one person who truly keeps score.</p>
+                            <Button asChild size="lg" className="w-full rounded-xl font-semibold bg-amber-500 hover:bg-amber-400 text-black">
+                                <Link href="/onboarding">Get matched <ArrowRight size={16} className="ml-2" /></Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <p className="text-center text-sm text-muted-foreground mt-8">
+                    Most members do both — <span className="text-primary font-medium">a group for energy</span>, <span className="text-amber-400 font-medium">a buddy for depth</span>.
+                </p>
             </div>
         </section>
     );
@@ -419,6 +502,7 @@ export default function LandingPageClient({ userCount }: { userCount: number }) 
     return (
         <div className="bg-background text-foreground min-h-screen">
             <HeroSection userCount={userCount} />
+            <TwoWaysSection />
             <HowItWorksSection />
             <AppPreviewSection />
             <StatsSection userCount={userCount} />

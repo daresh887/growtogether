@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Check, Loader2 } from "lucide-react";
+import { BUDDY_STYLES, BUDDY_CADENCES, ONBOARDING_PREFS_KEY, type OnboardingPrefs } from "@/utils/buddy-constants";
 
 /* ──────────────────── DATA ──────────────────── */
 
@@ -471,6 +472,164 @@ function AppPreviewStreakScreen({ onNext }: { onNext: () => void }) {
     );
 }
 
+type AccountabilityMode = "group" | "buddy" | "both";
+
+function PathChoiceScreen({ onSelect }: { onSelect: (mode: AccountabilityMode) => void }) {
+    const options: { id: AccountabilityMode; emoji: string; title: string; desc: string; accent: string }[] = [
+        { id: "group", emoji: "👥", title: "A group", desc: "Feed, streaks & leaderboards with 5–30 people chasing the same goal", accent: "hover:border-primary data-[selected=true]:border-primary" },
+        { id: "buddy", emoji: "🤝", title: "A 1:1 buddy", desc: "One matched partner. Private check-ins. Nowhere to hide.", accent: "hover:border-amber-400 data-[selected=true]:border-amber-400" },
+        { id: "both", emoji: "⚡", title: "Both", desc: "Group energy for momentum, a buddy for depth", accent: "hover:border-green-400 data-[selected=true]:border-green-400" },
+    ];
+    const [selected, setSelected] = useState<AccountabilityMode | null>(null);
+
+    return (
+        <Container>
+            <div className="text-5xl mb-4">🧭</div>
+            <h1 className="text-2xl font-bold text-center mb-3">How do you want to be<br />held accountable?</h1>
+            <p className="text-muted-foreground text-center mb-8">Two very different flavors — pick what fits you</p>
+            <div className="w-full space-y-3">
+                {options.map(opt => (
+                    <button
+                        key={opt.id}
+                        data-selected={selected === opt.id}
+                        onClick={() => {
+                            setSelected(opt.id);
+                            setTimeout(() => onSelect(opt.id), 300);
+                        }}
+                        className={cn(
+                            "w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-border bg-card text-left cursor-pointer transition-all",
+                            opt.accent,
+                            selected === opt.id && "scale-[1.02]"
+                        )}
+                    >
+                        <span className="text-4xl">{opt.emoji}</span>
+                        <div className="flex-1">
+                            <div className="font-bold">{opt.title}</div>
+                            <div className="text-xs text-muted-foreground leading-relaxed">{opt.desc}</div>
+                        </div>
+                        {selected === opt.id && (
+                            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
+                                <Check size={14} className="text-primary-foreground" />
+                            </div>
+                        )}
+                    </button>
+                ))}
+            </div>
+        </Container>
+    );
+}
+
+function BuddyPreferencesScreen({ onNext, styles, onToggleStyle, cadence, onCadence }: {
+    onNext: () => void;
+    styles: string[];
+    onToggleStyle: (id: string) => void;
+    cadence: string;
+    onCadence: (id: string) => void;
+}) {
+    return (
+        <Container>
+            <div className="text-5xl mb-4">🤝</div>
+            <h1 className="text-2xl font-bold text-center mb-3">What do you look for<br />in a buddy?</h1>
+            <p className="text-muted-foreground text-center mb-6">Pick the style that actually works on you</p>
+
+            <div className="grid grid-cols-2 gap-3 w-full mb-6">
+                {BUDDY_STYLES.map(s => {
+                    const isSelected = styles.includes(s.id);
+                    return (
+                        <button
+                            key={s.id}
+                            onClick={() => onToggleStyle(s.id)}
+                            className={cn(
+                                "relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all text-center",
+                                isSelected ? "border-amber-400 bg-amber-500/10 scale-[1.02]" : "border-border bg-card hover:border-muted-foreground/40"
+                            )}
+                        >
+                            {isSelected && (
+                                <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center">
+                                    <Check size={12} className="text-black" />
+                                </div>
+                            )}
+                            <span className="text-3xl mb-1.5">{s.emoji}</span>
+                            <span className={cn("text-sm font-semibold mb-0.5", isSelected ? "text-amber-400" : "text-foreground")}>{s.label}</span>
+                            <span className="text-[10px] text-muted-foreground leading-tight">{s.blurb}</span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            <p className="text-sm font-semibold text-muted-foreground mb-3">How often do you want to check in together?</p>
+            <div className="flex gap-2 w-full mb-6">
+                {BUDDY_CADENCES.map(c => (
+                    <button
+                        key={c.id}
+                        onClick={() => onCadence(c.id)}
+                        className={cn(
+                            "flex-1 py-2.5 px-1 rounded-xl border-2 text-xs font-semibold cursor-pointer transition-all",
+                            cadence === c.id ? "border-amber-400 bg-amber-500/10 text-amber-400" : "border-border bg-card text-muted-foreground hover:border-muted-foreground/40"
+                        )}
+                    >
+                        <div className="text-lg mb-0.5">{c.emoji}</div>
+                        {c.short}
+                    </button>
+                ))}
+            </div>
+
+            <ContinueButton onClick={onNext} disabled={styles.length === 0} />
+        </Container>
+    );
+}
+
+function AppPreviewBuddyScreen({ onNext }: { onNext: () => void }) {
+    const ringSize = 56, stroke = 5;
+    const radius = (ringSize - stroke) / 2;
+    const circumference = 2 * Math.PI * radius;
+
+    return (
+        <Container>
+            <Badge variant="outline" className="mb-3 text-amber-400 border-amber-500/30">App Preview</Badge>
+            <h1 className="text-2xl font-bold text-center mb-2">Meet your match</h1>
+            <p className="text-muted-foreground text-center mb-6">We score compatibility on goals, rhythm & style</p>
+
+            <Card className="w-full mb-4 border-amber-500/30">
+                <CardContent className="p-5">
+                    <div className="flex items-start gap-3.5 mb-4">
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-border shrink-0">
+                            <img src="/images/avatars/diana.png" alt="Maya R." className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="font-bold">Maya R.</div>
+                            <p className="text-xs text-muted-foreground">&ldquo;Ship my portfolio by December&rdquo;</p>
+                            <div className="flex gap-1.5 mt-1.5">
+                                <Badge variant="secondary" className="text-[10px]">🔥 Straight shooter</Badge>
+                                <Badge variant="secondary" className="text-[10px]">☀️ Daily</Badge>
+                            </div>
+                        </div>
+                        <div className="relative shrink-0" style={{ width: ringSize, height: ringSize }}>
+                            <svg width={ringSize} height={ringSize} className="-rotate-90">
+                                <circle cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-border" />
+                                <circle cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none" stroke="#fbbf24" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${0.92 * circumference} ${circumference}`} />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-xs font-extrabold text-amber-400">92%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                        <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">✓ Both into Coding</span>
+                        <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">✓ Daily check-ins</span>
+                    </div>
+                    <div className="w-full py-2.5 rounded-xl bg-amber-500 text-black text-sm font-semibold text-center">
+                        🤝 Ask to be buddies
+                    </div>
+                </CardContent>
+            </Card>
+
+            <p className="text-xs text-muted-foreground text-center mb-6">Your buddy sees every check-in — and every miss 👀</p>
+            <ContinueButton onClick={onNext} />
+        </Container>
+    );
+}
+
 function CommunityQuestionScreen({ onNext }: { onNext: () => void }) {
     return (
         <Container>
@@ -549,19 +708,35 @@ function NameScreen({ onNext, name, onChange }: { onNext: () => void; name: stri
     );
 }
 
-function ReadyScreen({ onComplete, name }: { onComplete: () => void; name: string }) {
+function ReadyScreen({ onComplete, name, mode }: { onComplete: () => void; name: string; mode: AccountabilityMode }) {
+    const copy = {
+        group: {
+            sub: <>Your accountability journey starts now.<br />Let&apos;s find your perfect group.</>,
+            steps: ["Browse groups that match your interests", "Join one that feels right", "Post your first check-in today"],
+            label: "Find my group →",
+        },
+        buddy: {
+            sub: <>Your accountability journey starts now.<br />Let&apos;s find your perfect buddy.</>,
+            steps: ["Create your account", "Tell us what you look for in a buddy", "Get matched & start checking in"],
+            label: "Find my buddy →",
+        },
+        both: {
+            sub: <>Your accountability journey starts now.<br />A group for energy, a buddy for depth.</>,
+            steps: ["Join a group that matches your interests", "Get matched with a 1:1 buddy", "Post your first check-in today"],
+            label: "Let's go →",
+        },
+    }[mode];
+
     return (
         <Container>
             <div className="text-7xl mb-6 animate-pulse">🎉</div>
             <h1 className="text-3xl font-bold text-center mb-3">Welcome, {name}!</h1>
-            <p className="text-lg text-muted-foreground text-center mb-8">
-                Your accountability journey starts now.<br />Let&apos;s find your perfect group.
-            </p>
+            <p className="text-lg text-muted-foreground text-center mb-8">{copy.sub}</p>
 
             <Card className="w-full mb-8">
                 <CardContent className="p-5">
                     <div className="text-sm font-semibold text-muted-foreground mb-3">✨ What happens next:</div>
-                    {["Browse groups that match your interests", "Join one that feels right", "Post your first check-in today"].map((item, i) => (
+                    {copy.steps.map((item, i) => (
                         <div key={i} className={cn("flex items-center gap-2.5 text-sm text-muted-foreground", i < 2 && "mb-2.5")}>
                             <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
                             {item}
@@ -570,7 +745,7 @@ function ReadyScreen({ onComplete, name }: { onComplete: () => void; name: strin
                 </CardContent>
             </Card>
 
-            <ContinueButton onClick={onComplete} label="Find my group →" />
+            <ContinueButton onClick={onComplete} label={copy.label} />
         </Container>
     );
 }
@@ -596,6 +771,9 @@ function OnboardingContent() {
     const [goalTypesSelected, setGoalTypesSelected] = useState<string[]>([]);
     const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
     const [name, setName] = useState("");
+    const [mode, setMode] = useState<AccountabilityMode>("both");
+    const [buddyStyles, setBuddyStyles] = useState<string[]>([]);
+    const [buddyCadence, setBuddyCadence] = useState("daily");
 
     useEffect(() => {
         const fetchUserCount = async () => {
@@ -610,8 +788,23 @@ function OnboardingContent() {
         setter(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
     const nextStep = () => setStep(step + 1);
-    const handleComplete = () => router.push("/login?next=/");
-    const totalSteps = 15;
+
+    const handleComplete = () => {
+        // Hand the answers to the in-app buddy setup wizard (prefills matching preferences)
+        try {
+            const prefs: OnboardingPrefs = {
+                mode,
+                buddyStyles,
+                cadence: buddyCadence,
+                interests: selectedInterests,
+            };
+            localStorage.setItem(ONBOARDING_PREFS_KEY, JSON.stringify(prefs));
+        } catch { /* private mode etc. — prefill is a nice-to-have */ }
+        router.push(`/login?next=${mode === "buddy" ? "/buddies" : "/"}`);
+    };
+
+    const wantsBuddy = mode === "buddy" || mode === "both";
+    const wantsGroup = mode === "group" || mode === "both";
 
     const screens = [
         <HumanWelcomeScreen key="welcome" onNext={nextStep} userCount={userCount} />,
@@ -619,19 +812,28 @@ function OnboardingContent() {
         <AnimatedStatScreen key="stat1" onNext={nextStep} emoji="📉" stat="92%" headline="of resolutions fail by February" description="The #1 reason? No accountability. No one watching. No consequences for quitting." color="#FF6B6B" />,
         <MomentumKillersScreen key="momentum" onNext={nextStep} selected={momentumKillersSelected} onToggle={toggle(setMomentumKillersSelected)} />,
         <AnimatedStatScreen key="stat2" onNext={nextStep} emoji="🔬" stat="65%" headline="more likely to succeed with a partner" description="And 95% more likely with regular check-ins. Science says accountability works." color="#00D9A5" />,
+        <PathChoiceScreen key="path" onSelect={m => { setMode(m); nextStep(); }} />,
+        ...(wantsBuddy ? [
+            <BuddyPreferencesScreen key="buddy-prefs" onNext={nextStep} styles={buddyStyles} onToggleStyle={toggle(setBuddyStyles)} cadence={buddyCadence} onCadence={setBuddyCadence} />,
+            <AppPreviewBuddyScreen key="preview-buddy" onNext={nextStep} />,
+        ] : []),
         <TestimonialScreen key="testimonials" onNext={nextStep} />,
         <GoalSelectionScreen key="goals" onNext={nextStep} selected={goalTypesSelected} onToggle={toggle(setGoalTypesSelected)} />,
         <ConsistencyScaleScreen key="scale" onNext={nextStep} value={consistencyScore} onChange={setConsistencyScore} />,
-        <AppPreviewGroupsScreen key="preview-groups" onNext={nextStep} />,
-        <AppPreviewCheckInScreen key="preview-checkin" onNext={nextStep} />,
-        <AppPreviewStreakScreen key="preview-streak" onNext={nextStep} />,
+        ...(wantsGroup ? [
+            <AppPreviewGroupsScreen key="preview-groups" onNext={nextStep} />,
+            <AppPreviewCheckInScreen key="preview-checkin" onNext={nextStep} />,
+            <AppPreviewStreakScreen key="preview-streak" onNext={nextStep} />,
+        ] : []),
         <CommunityQuestionScreen key="community" onNext={nextStep} />,
         <InterestsScreen key="interests" onNext={nextStep} selected={selectedInterests} onToggle={toggle(setSelectedInterests)} />,
         <NameScreen key="name" onNext={nextStep} name={name} onChange={setName} />,
-        <ReadyScreen key="ready" onComplete={handleComplete} name={name} />,
+        <ReadyScreen key="ready" onComplete={handleComplete} name={name} mode={mode} />,
     ];
 
-    if (step >= screens.length) return <ReadyScreen key="ready" onComplete={handleComplete} name={name} />;
+    const totalSteps = screens.length;
+
+    if (step >= screens.length) return <ReadyScreen key="ready" onComplete={handleComplete} name={name} mode={mode} />;
 
     return (
         <div className="min-h-screen flex flex-col bg-background text-foreground">
