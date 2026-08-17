@@ -1,93 +1,93 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { KeyRound, ArrowLeft, Loader2 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import AuthShell from "@/components/ledger/AuthShell";
 
 export default function ForgotPasswordPage() {
+    const supabase = createClient();
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState<string | null>(null);
+    const [sent, setSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const supabase = createClient();
 
-    const handleReset = async (e: React.FormEvent) => {
+    const submit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (loading) return;
         setLoading(true);
         setError(null);
-        setMessage(null);
-
         try {
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${location.origin}/auth/callback?next=/update-password`,
+                redirectTo: `${location.origin}/update-password`,
             });
             if (error) throw error;
-            setMessage("Check your email for the password reset link!");
+            setSent(true);
         } catch (err: any) {
-            setError(err.message);
+            setError(err?.message || "Something went wrong");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background p-6">
-            <Card className="w-full max-w-sm">
-                <CardContent className="p-8">
-                    <div className="flex justify-center mb-6">
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                            <KeyRound className="h-6 w-6 text-primary" />
-                        </div>
-                    </div>
-
-                    <h1 className="text-2xl font-bold text-center mb-2">Reset Password</h1>
-                    <p className="text-sm text-muted-foreground text-center mb-8">
-                        Enter your email to receive a reset link
+        <AuthShell>
+            {sent ? (
+                <section>
+                    <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-3">
+                        Check your email.
+                    </h1>
+                    <p className="type-doc leading-relaxed mb-10">
+                        We sent a reset link to {email}.
+                    </p>
+                    <Link href="/login" className="overline ink-link">
+                        Back to sign in
+                    </Link>
+                </section>
+            ) : (
+                <section>
+                    <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-3">
+                        Reset your password.
+                    </h1>
+                    <p className="text-[var(--ink-soft)] leading-relaxed mb-10">
+                        Enter your email and we will send you a link.
                     </p>
 
-                    <form onSubmit={handleReset} className="space-y-4">
-                        <div>
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
+                    <form onSubmit={submit}>
+                        <label className="block mb-10">
+                            <span className="overline block mb-2">Email</span>
+                            <input
                                 type="email"
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                placeholder="you@example.com"
                                 required
-                                className="mt-2"
+                                autoComplete="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="you@example.com"
+                                className="type-doc w-full bg-transparent text-base border-0 border-b border-[var(--rule)] focus:border-[var(--ink)] focus:outline-none py-2 placeholder:text-[var(--ink-soft)]"
                             />
-                        </div>
-
-                        {message && (
-                            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-500 text-sm">
-                                {message}
-                            </div>
-                        )}
+                        </label>
 
                         {error && (
-                            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                            <p className="text-sm mb-6" style={{ color: "var(--stamp-red)" }} role="alert">
                                 {error}
-                            </div>
+                            </p>
                         )}
 
-                        <Button type="submit" disabled={loading} className="w-full mt-2">
-                            {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending...</> : "Send Reset Link"}
-                        </Button>
+                        <div className="flex items-center gap-8">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="bg-[var(--ink)] text-[var(--paper)] px-7 py-3 text-sm font-medium tracking-wide disabled:opacity-25"
+                            >
+                                {loading ? "Sending…" : "Send the link"}
+                            </button>
+                            <Link href="/login" className="overline ink-link">
+                                Back to sign in
+                            </Link>
+                        </div>
                     </form>
-
-                    <div className="mt-6 text-center">
-                        <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1">
-                            <ArrowLeft size={12} /> Back to Login
-                        </Link>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+                </section>
+            )}
+        </AuthShell>
     );
 }

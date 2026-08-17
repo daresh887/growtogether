@@ -1,112 +1,392 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
-
-/* Dark mode only — blue-tinted theme */
-:root {
-  --radius: 0.5rem;
-  --background: oklch(0.145 0.014 250);
-  --foreground: oklch(0.985 0.005 250);
-  --card: oklch(0.19 0.016 250);
-  --card-foreground: oklch(0.985 0.005 250);
-  --popover: oklch(0.19 0.016 250);
-  --popover-foreground: oklch(0.985 0.005 250);
-  --primary: oklch(0.60 0.19 250);
-  --primary-foreground: oklch(0.985 0.005 250);
-  --secondary: oklch(0.25 0.02 250);
-  --secondary-foreground: oklch(0.985 0.005 250);
-  --muted: oklch(0.24 0.018 250);
-  --muted-foreground: oklch(0.65 0.02 250);
-  --accent: oklch(0.30 0.03 250);
-  --accent-foreground: oklch(0.985 0.005 250);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.32 0.025 250);
-  --input: oklch(0.28 0.02 250);
-  --ring: oklch(0.60 0.19 250);
-  --sidebar: oklch(0.17 0.015 250);
-  --sidebar-foreground: oklch(0.985 0.005 250);
-  --sidebar-primary: oklch(0.60 0.19 250);
-  --sidebar-primary-foreground: oklch(0.985 0.005 250);
-  --sidebar-accent: oklch(0.28 0.025 250);
-  --sidebar-accent-foreground: oklch(0.985 0.005 250);
-  --sidebar-border: oklch(0.32 0.025 250);
-  --sidebar-ring: oklch(0.60 0.19 250);
-  --chart-1: oklch(0.60 0.19 250);
-  --chart-2: oklch(0.60 0.16 200);
-  --chart-3: oklch(0.70 0.14 170);
-  --chart-4: oklch(0.50 0.20 280);
-  --chart-5: oklch(0.65 0.18 230);
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
-  --color-secondary: var(--secondary);
-  --color-accent: var(--accent);
-  --color-muted: var(--muted);
-  --color-card: var(--card);
-  --color-border: var(--border);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --font-sans: var(--font-inter), Inter, -apple-system, sans-serif;
-}
-
+/* The app is one system now: the ledger. Pure white, black ink,
+   one red used only by stamps. */
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-grotesk), system-ui, sans-serif;
+  background: #ffffff;
+  color: #161513;
+  min-height: 100dvh;
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+/* ==========================================================================
+   LEDGER — the design system.
+   Pure white. Black ink. One red, used only by stamps.
+   ========================================================================== */
 
-  body {
-    @apply bg-background text-foreground;
-    background-image: radial-gradient(circle at top center, color-mix(in srgb, var(--background), white 5%), var(--background));
-    min-height: 100dvh;
+.ledger {
+  --ink: #161513;
+  --ink-soft: #6e6c67;
+  --paper: #ffffff;
+  --rule: #e9e7e2;
+  --stamp-red: #c2261f;
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-grotesk), system-ui, sans-serif;
+}
+
+.ledger ::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* Contract text — the only place the typewriter face appears */
+.ledger .type-doc {
+  font-family: var(--font-typewriter), "Courier New", monospace;
+}
+
+/* Quiet all-caps label, used for section marks and metadata */
+.ledger .overline {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+/* --------------------------------------------------------------------------
+   Effect 4 (approved): ink hover states.
+   Links get an underline that draws itself in.
+   -------------------------------------------------------------------------- */
+
+.ledger .ink-link {
+  position: relative;
+  text-decoration: none;
+  color: inherit;
+}
+
+.ledger .ink-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  height: 1px;
+  width: 100%;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.ledger .ink-link:hover::after,
+.ledger .ink-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* A failed signer's name, struck for good. */
+.ledger .struck {
+  position: relative;
+}
+
+.ledger .struck::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 55%;
+  height: 3px;
+  background: var(--stamp-red);
+}
+
+/* Wall entries: a red line strikes through the name on hover */
+.ledger .breach-entry .strike-target {
+  position: relative;
+}
+
+.ledger .breach-entry .strike-target::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 55%;
+  height: 2px;
+  background: var(--stamp-red);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.ledger .breach-entry:hover .strike-target::before {
+  transform: scaleX(1);
+}
+
+/* --------------------------------------------------------------------------
+   Effect 3 (approved): paper grain — on contract documents ONLY.
+   Felt more than seen. Everything else stays perfectly flat.
+   -------------------------------------------------------------------------- */
+
+.ledger .paper-grain {
+  position: relative;
+}
+
+.ledger .paper-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+/* --------------------------------------------------------------------------
+   Controls. Two shapes only: a filled button for the one action a page
+   exists for, and a boxed link for the one place you always need to get
+   back to. Everything else stays a quiet overline link.
+   -------------------------------------------------------------------------- */
+
+.ledger .btn-ink {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+  padding: 0.75rem 1.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition: opacity 0.18s ease;
+}
+
+.ledger .btn-ink:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.ledger .btn-ink:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* The one red button in the app: it does exactly what it says, and it only
+   exists where someone has already failed. */
+.ledger .btn-red {
+  display: inline-block;
+  background: var(--stamp-red);
+  color: var(--paper);
+  border: 1px solid var(--stamp-red);
+  padding: 0.6rem 1.4rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  transition: opacity 0.18s ease;
+}
+
+.ledger .btn-red:hover,
+.ledger .btn-red:focus-visible {
+  opacity: 0.85;
+}
+
+/* The only boxed control in the navigation: the way back to the feed.
+   It fills with ink on hover, and stays filled while you are there. */
+.ledger .nav-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  padding: 0.5em 0.8em;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  background: transparent;
+  transition:
+    background-color 0.2s cubic-bezier(0.22, 0.61, 0.36, 1),
+    color 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.ledger .nav-button:hover,
+.ledger .nav-button:focus-visible {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.ledger .nav-button--current {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* Filled from the start: the action, not a destination. */
+.ledger .nav-button--ink {
+  background: var(--ink);
+  color: var(--paper);
+  transition: opacity 0.18s ease;
+}
+
+.ledger .nav-button--ink:hover,
+.ledger .nav-button--ink:focus-visible {
+  background: var(--ink);
+  color: var(--paper);
+  opacity: 0.85;
+}
+
+/* --------------------------------------------------------------------------
+   The tape — the running clock, pinned to the top of the page.
+   Flat paper like everything else; the only motion is the second hand
+   and the window draining along the bottom rule.
+   -------------------------------------------------------------------------- */
+
+.ledger .tape {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* Under three hours the clock goes red, but keeps its paper. */
+.ledger .tape--urgent {
+  color: var(--stamp-red);
+}
+
+/* Past the deadline the tape inverts. Nothing else in the app does this. */
+.ledger .tape--overdue {
+  background: var(--stamp-red);
+  color: var(--paper);
+}
+
+.ledger .tape-digits {
+  font-family: var(--font-typewriter), "Courier New", monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.02em;
+}
+
+/* Unit captions under each pair of digits, like a stamped form field */
+.ledger .tape-unit {
+  margin-top: 0.375rem;
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+/* The overline is normally grey; on the tape it takes the tape's colour */
+.ledger .tape-label {
+  color: currentColor;
+  opacity: 0.6;
+}
+
+.ledger .tape--overdue .tape-label {
+  opacity: 0.85;
+}
+
+/* The second hand: the colons keep time. Both are driven from one shared
+   beat in JS, so they cannot drift apart the way two CSS animations would. */
+.ledger .tape-colon {
+  opacity: 0.4;
+}
+
+.ledger .tape-colon--off {
+  opacity: 0.12;
+}
+
+/* The window, draining left to right. Doubles as the tape's bottom rule. */
+.ledger .tape-rail {
+  height: 2px;
+  width: 100%;
+  background: var(--rule);
+}
+
+.ledger .tape--overdue .tape-rail {
+  background: color-mix(in srgb, var(--paper) 30%, transparent);
+}
+
+.ledger .tape-meter {
+  height: 100%;
+  width: 100%;
+  background: currentColor;
+  transform-origin: left center;
+  /* Matches the beat, so the rule creeps instead of stepping. */
+  transition: transform 0.5s linear;
+}
+
+@keyframes tape-alarm {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
   }
 }
 
-/* Only animation we keep: simple spinner for loading states */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
+.ledger .tape--urgent .tape-meter {
+  animation: tape-alarm 1.8s ease-in-out infinite;
+}
 
-  to {
-    transform: rotate(360deg);
+/* --------------------------------------------------------------------------
+   The stamp — the one loud element in the system.
+   Status vocabulary for the whole app. Red is reserved for BREACHED.
+   -------------------------------------------------------------------------- */
+
+.ledger .stamp {
+  display: inline-block;
+  padding: 0.3em 0.75em;
+  border: 3px solid currentColor;
+  border-radius: 2px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink);
+  transform: rotate(var(--stamp-rot, -5deg));
+  filter: url(#stamp-roughen);
+  mix-blend-mode: multiply;
+}
+
+.ledger .stamp--red {
+  color: var(--stamp-red);
+}
+
+.ledger .stamp--lg {
+  font-size: 1.375rem;
+  border-width: 4px;
+  padding: 0.35em 0.85em;
+}
+
+/* Effect 1 (approved): the stamp slam — the only orchestrated moment.
+   Used when a status LANDS (signing, breach publishing, honoring). */
+@keyframes stamp-slam {
+  0% {
+    transform: rotate(var(--stamp-rot, -5deg)) scale(2.4);
+    opacity: 0;
+  }
+  55% {
+    transform: rotate(var(--stamp-rot, -5deg)) scale(0.94);
+    opacity: 1;
+  }
+  75% {
+    transform: rotate(var(--stamp-rot, -5deg)) scale(1.05);
+  }
+  100% {
+    transform: rotate(var(--stamp-rot, -5deg)) scale(1);
+    opacity: 1;
   }
 }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
+.ledger .stamp--slam {
+  animation: stamp-slam 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ledger .stamp--slam {
+    animation: none;
+  }
+  .ledger .ink-link::after,
+  .ledger .breach-entry .strike-target::before,
+  .ledger .nav-button,
+  .ledger .nav-button--ink,
+  .ledger .btn-ink,
+  .ledger .btn-red {
+    transition: none;
+  }
+  .ledger .tape--urgent .tape-meter {
+    animation: none;
+  }
+  /* CSS keeps the last word on the blink: the beat still runs, it just
+     stops showing. */
+  .ledger .tape-colon--off {
+    opacity: 0.4;
+  }
+  .ledger .tape-meter {
+    transition: none;
+  }
 }

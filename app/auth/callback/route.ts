@@ -4,22 +4,39 @@ import { createClient } from '@/utils/supabase/server'
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
-    // if "next" is in param, use it as the redirect URL
-    const next = searchParams.get('next') ?? '/'
+    // Only follow a real in-app destination. "/" is the generic default,
+    // so treat it as unset and decide below where they actually belong.
+    const requested = searchParams.get('next')
+    const next =
+        requested && requested !== '/' && requested.startsWith('/') && !requested.startsWith('//')
+            ? requested
+            : null
 
     if (code) {
         const supabase = await createClient()
         const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) {
+            // Without this, every OAuth failure looks identical from the
+            // outside: expired code, missing PKCE verifier, misconfigured
+            // redirect URL. Say which one it was.
+            console.error('OAuth code exchange failed:', error.code || error.status, error.message)
+        }
         if (!error) {
-            // Check profile and tutorial completion
-            const { data: { user } } = await supabase.auth.getUser()
-            const metadata = user?.user_metadata || {}
+            let redirectPath = next
 
-            let redirectPath = '/dashboard'
-            if (!metadata.profile_complete) {
-                redirectPath = '/setup'
-            } else if (!metadata.tutorial_complete) {
-                redirectPath = '/tutorial'
+            if (!redirectPath) {
+                // No contract yet means the whole point is still ahead of them.
+                const { data: { user } } = await supabase.auth.getUser()
+                const { data: contract } = user
+                    ? await supabase
+                        .from('contracts')
+                        .select('id')
+                        .eq('user_id', user.id)
+                        .eq('status', 'active')
+                        .maybeSingle()
+                    : { data: null }
+
+                redirectPath = contract ? `/contracts/${contract.id}` : '/lock-in'
             }
 
             const forwardedHost = request.headers.get('x-forwarded-host')

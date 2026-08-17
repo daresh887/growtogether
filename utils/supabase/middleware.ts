@@ -1,6 +1,49 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// The session is unrecoverable: the refresh token is gone, spent, or its
+// session no longer exists. Signing out and back in is the only cure.
+const STALE_SESSION_CODES = new Set([
+    'refresh_token_not_found',
+    'refresh_token_already_used',
+    'session_not_found',
+    'session_expired',
+    'user_not_found',
+])
+
+function authErrorCode(error: unknown): string {
+    return typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code?: unknown }).code ?? '')
+        : ''
+}
+
+function isStaleSession(error: unknown): boolean {
+    return STALE_SESSION_CODES.has(authErrorCode(error))
+}
+
+// Nobody is signed in. Normal for every logged-out visitor, not an error.
+function isMissingSession(error: unknown): boolean {
+    return authErrorCode(error) === 'session_missing' || authErrorCode(error) === ''
+}
+
+/**
+ * Drop the Supabase session cookies on this response. The PKCE code
+ * verifier is deliberately left alone: an OAuth sign-in that is mid-flight
+ * needs it to finish, and that is exactly when a dead session shows up.
+ */
+function clearAuthCookies(request: NextRequest, response: NextResponse) {
+    for (const cookie of request.cookies.getAll()) {
+        if (
+            cookie.name.startsWith('sb-') &&
+            cookie.name.includes('auth-token') &&
+            !cookie.name.includes('code-verifier')
+        ) {
+            request.cookies.delete(cookie.name)
+            response.cookies.set(cookie.name, '', { path: '/', maxAge: 0 })
+        }
+    }
+}
+
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
@@ -33,19 +76,39 @@ export async function updateSession(request: NextRequest) {
     // supabase.auth.getUser(). A simple mistake could make it very hard to debug
     // issues with users being randomly logged out.
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
+    let user = null
+    try {
+        const { data, error } = await supabase.auth.getUser()
+        if (error) throw error
+        user = data.user
+    } catch (error: unknown) {
+        // A refresh token the server no longer recognises (the session was
+        // revoked, the auth users were wiped, or the token was already
+        // rotated). Supabase keeps failing on it until the cookie is gone,
+        // which looks like "I can't sign in with Google any more" — so drop
+        // the dead session here and let them start a clean one.
+        if (isStaleSession(error)) {
+            clearAuthCookies(request, supabaseResponse)
+        } else if (!isMissingSession(error)) {
+            console.error('Auth check failed in middleware:', error)
+        }
+    }
 
-    if (
-        !user &&
-        !request.nextUrl.pathname.startsWith('/login') &&
-        !request.nextUrl.pathname.startsWith('/auth') &&
-        request.nextUrl.pathname !== '/' &&
-        !request.nextUrl.pathname.startsWith('/onboarding') &&
-        !request.nextUrl.pathname.startsWith('/forgot-password') &&
-        !request.nextUrl.pathname.startsWith('/update-password')
-    ) {
+    // The record is public: anyone can read the feed and any contract.
+    // Everything else needs an account.
+    const path = request.nextUrl.pathname
+    const isPublic =
+        path === '/' ||
+        path.startsWith('/feed') ||
+        path.startsWith('/losers') ||
+        path.startsWith('/login') ||
+        path.startsWith('/signup') ||
+        path.startsWith('/auth') ||
+        path.startsWith('/contracts') ||
+        path.startsWith('/forgot-password') ||
+        path.startsWith('/update-password')
+
+    if (!user && !isPublic) {
         // no user, redirect to login page
         const url = request.nextUrl.clone()
         url.pathname = '/login'
