@@ -2,15 +2,17 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { getBreachedContracts } from "@/app/actions/contracts";
 import { filedUnder } from "@/utils/contract-shared";
+import { atHandle } from "@/utils/identity";
 import { Stamp, StampFilter } from "@/components/ledger/Stamp";
 import SignatureReplay from "@/components/ledger/SignatureReplay";
+import Avatar from "@/components/ledger/Avatar";
 import LedgerHeader from "@/components/ledger/LedgerHeader";
 import Tape from "@/components/ledger/Tape";
 
 export const metadata = {
     title: "The losers: LockIn Buddy",
     description:
-        "The people who signed with their names and faces, promised proof, and stopped.",
+        "The people who signed a real name and a real face against a promise, and stopped.",
 };
 
 // Stamps land at slightly different angles, like a real ledger
@@ -54,12 +56,20 @@ export default async function Losers() {
                             <li key={contract.id} className="py-8 border-b border-[var(--rule)] breach-entry">
                                 <div className="flex flex-col sm:flex-row sm:items-start gap-5">
                                     <div className="flex-1 min-w-0 flex gap-4">
-                                        {contract.photoUrl && (
+                                        {/* The seal is off on this page: the face they
+                                            signed with, not the picture they chose. */}
+                                        {contract.faceUrl ? (
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img
-                                                src={contract.photoUrl}
-                                                alt={`Photo of ${contract.signerName}`}
+                                                src={contract.faceUrl}
+                                                alt={`Photo of ${contract.realName}`}
                                                 className="size-14 object-cover border border-[var(--rule)] shrink-0"
+                                            />
+                                        ) : (
+                                            <Avatar
+                                                username={contract.username}
+                                                avatarUrl={contract.avatarUrl}
+                                                size={56}
                                             />
                                         )}
                                         <div className="min-w-0">
@@ -71,8 +81,15 @@ export default async function Losers() {
                                                 href={`/contracts/${contract.id}`}
                                                 className="text-lg font-semibold ink-link"
                                             >
-                                                <span className="strike-target">{contract.signerName}</span>
+                                                <span className="strike-target">
+                                                    {contract.realName || atHandle(contract.username)}
+                                                </span>
                                             </Link>
+                                            {contract.realName && (
+                                                <p className="overline mt-1">
+                                                    posted here as {atHandle(contract.username)}
+                                                </p>
+                                            )}
                                             <p className="type-doc mt-2 leading-relaxed text-[0.9375rem]">
                                                 Signed to {contract.commitment.replace(/\.+$/, "")}. Stopped.
                                             </p>

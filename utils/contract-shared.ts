@@ -279,14 +279,14 @@ export function durationPhrase(days: number | null): string {
 // The punishment. One for everyone, not optional, acknowledged at lock-in.
 // Completes the sentence "If I break this contract, …".
 export const STANDARD_PENALTY =
-    "my name, my face, and everything on this contract will be published on the front page of LockIn Buddy. Everyone will see that I quit";
+    "the seal comes off — my real name, my face and my signature are published on the front page of LockIn Buddy, under the username everybody already knows. Everyone will see that I quit";
 
 // What gets published on a breach, shown at lock-in as § clauses.
 export const PUNISHMENT_TERMS = [
-    "Your name and your face go on the front page, where you will literally be publicly humiliated.",
-    "Your commitment and your signature are shown with it.",
-    "Your social media is linked, so anyone can ask you why you quit.",
-    "We post it on our X. Everyone will see that you quit.",
+    "Until you fail you are only your username. Nobody can see your real name or your face — not us on the page, not anyone reading the database.",
+    "Break the contract and the seal comes off: the real name and the photo you signed with go on the front page.",
+    "Your signature is published with them, next to the commitment you made.",
+    "It stays attached to the username people watched you post under, so everyone knows exactly who quit.",
 ];
 
 export type ContractStatus = "active" | "breached" | "honored" | "redeemed" | "void";

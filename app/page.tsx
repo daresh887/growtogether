@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { filedUnder } from "@/utils/contract-shared";
+import { atHandle } from "@/utils/identity";
 import { DEMO_GAVE_UP, DEMO_LANDING_POSTS } from "@/utils/demo-data";
 import { Stamp, StampFilter } from "@/components/ledger/Stamp";
 import LedgerHeader from "@/components/ledger/LedgerHeader";
@@ -10,7 +11,7 @@ import ProofEntry from "@/components/ledger/ProofEntry";
 export const metadata = {
     title: "LockIn Buddy",
     description:
-        "Sign a contract with your name and face on it. Commit to one thing and post proof. Give up, and you're publicly humiliated.",
+        "Commit to one thing under a username and post proof. Your real name and face are sealed against the contract. Give up, and the seal comes off.",
 };
 
 const ROTATIONS = [-6, -4, -8];
@@ -47,9 +48,11 @@ export default async function Landing() {
                     </h1>
 
                     <p className="mt-8 max-w-xl leading-relaxed text-[var(--ink-soft)]">
-                        Sign a contract with your name and your face on it, commit
-                        to one thing, and post proof that you&rsquo;re doing it. If you
-                        give up, you&rsquo;re published on the front page where everybody will see that you failed. 
+                        Pick a username, commit to one thing, and post proof that
+                        you&rsquo;re doing it. You sign the contract with your real name
+                        and your real face &mdash; but they stay sealed, and nobody can see
+                        them while you keep going. Give up, and the seal comes off on
+                        the front page.
                     </p>
 
                     <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
@@ -75,11 +78,11 @@ export default async function Landing() {
                             {gaveUp.map((contract, i) => (
                                 <li key={contract.id} className="py-7 border-b border-[var(--rule)] breach-entry">
                                     <div className="flex items-start gap-4">
-                                        {contract.photoUrl && (
+                                        {contract.faceUrl && (
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img
-                                                src={contract.photoUrl}
-                                                alt={`Photo of ${contract.signerName}`}
+                                                src={contract.faceUrl}
+                                                alt={`Photo of ${contract.realName}`}
                                                 className="size-14 object-cover border border-[var(--rule)] shrink-0"
                                             />
                                         )}
@@ -92,8 +95,15 @@ export default async function Landing() {
                                                 href={`/contracts/${contract.id}`}
                                                 className="text-lg font-semibold ink-link"
                                             >
-                                                <span className="strike-target">{contract.signerName}</span>
+                                                <span className="strike-target">
+                                                    {contract.realName || atHandle(contract.username)}
+                                                </span>
                                             </Link>
+                                            {contract.realName && (
+                                                <p className="overline mt-1">
+                                                    posted here as {atHandle(contract.username)}
+                                                </p>
+                                            )}
                                             <p className="type-doc mt-2 leading-relaxed text-[0.9375rem]">
                                                 Signed to {contract.commitment.replace(/\.+$/, "")}. Stopped.
                                             </p>

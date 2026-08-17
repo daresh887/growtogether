@@ -44,8 +44,13 @@ const FORFEIT =
 const dereck: ContractRecord = {
     id: "demo-dereck",
     userId: "demo-user-dereck",
-    signerName: "Dereck Johnson",
-    photoUrl: "https://i.pravatar.cc/600?img=12",
+    // Broke the contract, so the seal is off: the landing shows what the
+    // reveal actually looks like.
+    username: "dereckbuilds",
+    avatarUrl: "",
+    revealed: true,
+    realName: "Dereck Johnson",
+    faceUrl: "https://i.pravatar.cc/600?img=12",
     // No social links: there is no real account they could point at.
     socialUrl: "",
     socialPlatform: "",
@@ -109,8 +114,12 @@ const dereckWall: CommentRecord[] = [
 const alex: ContractRecord = {
     id: "demo-alex",
     userId: "demo-user-alex",
-    signerName: "Alex Hanks",
-    photoUrl: "https://i.pravatar.cc/600?img=60",
+    // Still going, so still sealed — and using a picture they chose.
+    username: "alexlifts",
+    avatarUrl: "https://i.pravatar.cc/600?img=60",
+    revealed: false,
+    realName: null,
+    faceUrl: null,
     socialUrl: "https://instagram.com/alexlifts",
     socialPlatform: "instagram",
     socialHandle: "alexlifts",
@@ -138,8 +147,12 @@ const alex: ContractRecord = {
 const johan: ContractRecord = {
     id: "demo-johan",
     userId: "demo-user-johan",
-    signerName: "Anne Miller",
-    photoUrl: "https://i.pravatar.cc/600?img=5",
+    // Sealed, and chose no picture at all: this is the monogram case.
+    username: "annewrites",
+    avatarUrl: "",
+    revealed: false,
+    realName: null,
+    faceUrl: null,
     socialUrl: "https://x.com/johanwrites",
     socialPlatform: "x",
     socialHandle: "johanwrites",
@@ -185,8 +198,8 @@ function post(
         createdAt,
         heat: 0,
         dayNumber,
-        signerName: contract.signerName,
-        photoUrl: contract.photoUrl,
+        username: contract.username,
+        avatarUrl: contract.avatarUrl,
         discipline: contract.discipline,
         category: contract.category,
         commitment: contract.commitment,

@@ -78,7 +78,7 @@ export default function ContractPanel({ contract }: { contract: ContractRecord }
                     <div
                         role="dialog"
                         aria-modal="true"
-                        aria-label={`Contract signed by ${contract.signerName}`}
+                        aria-label={`Contract signed by @${contract.username}`}
                         className="w-full max-w-2xl mx-auto"
                         // The document is not the backdrop; clicks inside it stay inside.
                         onClick={(e) => e.stopPropagation()}

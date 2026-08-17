@@ -4,6 +4,7 @@ import { getContract } from "@/app/actions/contracts";
 import { getPublicProfiles } from "@/app/actions/profile";
 import { getDemoProfile } from "@/utils/demo-data";
 import { cadencePhrase, filedUnder, socialLabel, stampFor } from "@/utils/contract-shared";
+import { atHandle } from "@/utils/identity";
 import { StampFilter } from "@/components/ledger/Stamp";
 import ContractPanel from "@/components/ledger/ContractPanel";
 import ProfileHeader from "@/components/ledger/ProfileHeader";
@@ -39,12 +40,20 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
     const stamp = stampFor(contract.status, contract.effectiveAt);
 
     const profile = demo
-        ? { avatarUrl: contract.photoUrl, bio: demo.bio }
+        ? { avatarUrl: contract.avatarUrl, bio: demo.bio }
         : (await getPublicProfiles([contract.userId])).get(contract.userId);
-    const livePhoto = profile?.avatarUrl || contract.photoUrl;
 
     const isLive = contract.status === "active";
     const failed = contract.status === "breached";
+
+    // Once they have failed, the header leads with the face and the name
+    // that were sealed. Until then it is the picture they chose, or none.
+    const headerName = contract.revealed && contract.realName
+        ? contract.realName
+        : atHandle(contract.username);
+    const headerPhoto = contract.revealed && contract.faceUrl
+        ? contract.faceUrl
+        : (profile?.avatarUrl || contract.avatarUrl);
 
     const gaveUpOn = failed
         ? new Date(contract.breachedAt || contract.createdAt).toLocaleDateString("en-GB", {
@@ -62,8 +71,9 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
 
             <main className="flex-1 w-full max-w-5xl mx-auto px-6 pt-12 sm:pt-16 pb-24">
                 <ProfileHeader
-                    name={contract.signerName}
-                    avatarUrl={livePhoto}
+                    name={headerName}
+                    username={contract.username}
+                    avatarUrl={headerPhoto}
                     bio={profile?.bio || ""}
                     filedUnder={filedUnder(contract.category, contract.discipline)}
                     socialUrl={contract.socialUrl}
@@ -88,9 +98,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
                             Gave up{gaveUpOn ? ` · ${gaveUpOn}` : ""}
                         </p>
                         <p className="type-doc mt-3 leading-relaxed text-[0.9375rem]">
-                            {contract.signerName} signed to{" "}
-                            {contract.commitment.replace(/\.+$/, "")}, and promised proof{" "}
-                            {cadencePhrase(contract.cadence)}. They stopped.
+                            {contract.realName || atHandle(contract.username)}
+                            {contract.realName && (
+                                <>, who posted here as {atHandle(contract.username)},</>
+                            )}{" "}
+                            signed to {contract.commitment.replace(/\.+$/, "")}, and
+                            promised proof {cadencePhrase(contract.cadence)}. They stopped.
                         </p>
                         {/* The promise they made themselves at signing, quoted back.
                             Contracts older than the promise column fall back to the
@@ -112,7 +125,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
                             kind="wall"
                             comments={wallComments}
                             canComment={!!user && !demo}
-                            placeholder={`Say it to ${contract.signerName.split(" ")[0]}`}
+                            placeholder={`Say it to ${
+                                contract.realName
+                                    ? contract.realName.split(" ")[0]
+                                    : atHandle(contract.username)
+                            }`}
                         />
                         {!user && !demo && (
                             <p className="overline mt-3">
@@ -140,8 +157,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
                                         key={entry.id}
                                         entry={{
                                             ...entry,
-                                            signerName: contract.signerName,
-                                            photoUrl: livePhoto,
+                                            // Posts stay under the username even after a
+                                            // breach: this is the person people watched.
+                                            username: contract.username,
+                                            avatarUrl: profile?.avatarUrl || contract.avatarUrl,
                                             commitment: contract.commitment,
                                         }}
                                         canComment={!!user && !demo}
@@ -152,7 +171,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
                     </section>
 
                     <div className="lg:order-2">
-                        <ContractPanel contract={{ ...contract, photoUrl: livePhoto }} />
+                        <ContractPanel contract={contract} />
 
                     </div>
                 </div>

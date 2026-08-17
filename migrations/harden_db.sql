@@ -3,6 +3,13 @@
 -- signed-in user can talk to the database API directly, skipping the server
 -- actions entirely; after this migration the database holds the same line.
 -- RUN THIS IN YOUR SUPABASE SQL EDITOR, ideally before launch.
+--
+-- NOTE: run this BEFORE migrations/add_pseudonymous_identity.sql, and do
+-- not re-run it afterwards. That migration moves signer_name, photo_url,
+-- the social columns and signature_strokes off `contracts` and into the
+-- sealed contract_identity table, so the constraints in section 3 below
+-- and the author trigger in section 4 no longer match the schema. The
+-- later migration re-states both in their new form.
 
 -- ============================================
 -- 1. A contract can only be born live.

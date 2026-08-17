@@ -3,8 +3,10 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signContract } from "@/app/actions/contracts";
-import { uploadProfileImage } from "@/app/actions/profile";
+import { getMyFaceUrl, signContract, uploadFacePhoto } from "@/app/actions/contracts";
+import { isUsernameAvailable, uploadProfileImage } from "@/app/actions/profile";
+import { atHandle, validateUsername } from "@/utils/identity";
+import Avatar from "@/components/ledger/Avatar";
 import ImageCropper from "@/components/ledger/ImageCropper";
 import {
     CADENCES,
@@ -31,12 +33,15 @@ import SignatureCanvas, { type SignatureStrokes } from "@/components/ledger/Sign
 
 type Props = {
     defaultFullName: string;
-    defaultPhotoUrl: string;
+    /** Seeds the public picture only. The sealed face is never prefilled —
+     *  it has to be a photo they consciously put behind the contract. */
+    defaultAvatarUrl: string;
     // Seeds the flow at a given step with terms filled in (previews/tests)
     prefill?: {
         step: number;
         category?: CategorySlug;
         fullName?: string;
+        username?: string;
         photoUrl?: string;
         socialHandle?: string;
         commitment?: string;
@@ -44,20 +49,30 @@ type Props = {
     };
 };
 
+/** What we currently know about the typed username. */
+type UsernameState =
+    | { kind: "idle" }
+    | { kind: "checking" }
+    | { kind: "free" }
+    | { kind: "taken" }
+    | { kind: "invalid"; reason: string };
+
 const STEPS = ["The category", "Who you are", "The commitment", "The punishment", "Lock in"];
 
 const HOUSE_RULES = [
     "You sign a contract that says what you will do.",
     "It takes effect today. Your first post is your introduction.",
     "After that you post proof of your progress, as often as the contract says.",
-    "If you stop, your name and face are published here and on our X.",
+    "Everyone sees your username. Nobody sees your real name or your face.",
+    "If you stop, the seal comes off and both are published here.",
 ];
 
 const ACK_PHRASE = "I understand";
 
-export default function SignRitual({ defaultFullName, defaultPhotoUrl, prefill }: Props) {
+export default function SignRitual({ defaultFullName, defaultAvatarUrl, prefill }: Props) {
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const avatarInputRef = useRef<HTMLInputElement>(null);
 
     const [step, setStep] = useState(prefill?.step ?? 0);
     const [category, setCategory] = useState<CategorySlug | null>(prefill?.category ?? null);
@@ -68,11 +83,28 @@ export default function SignRitual({ defaultFullName, defaultPhotoUrl, prefill }
     const prefilledName = (prefill?.fullName ?? defaultFullName).trim().replace(/\s+/g, " ");
     const [firstName, setFirstName] = useState(prefilledName.split(" ")[0] || "");
     const [lastName, setLastName] = useState(prefilledName.split(" ").slice(1).join(" "));
-    const [photoUrl, setPhotoUrl] = useState(prefill?.photoUrl ?? defaultPhotoUrl);
+
+    // --- Public identity ---
+    const [username, setUsername] = useState(prefill?.username ?? "");
+    const [usernameState, setUsernameState] = useState<UsernameState>({ kind: "idle" });
+    /** "" is a real answer here: no profile picture at all. */
+    const [avatarUrl, setAvatarUrl] = useState(prefill?.photoUrl ?? defaultAvatarUrl);
     const [socialPlatformId, setSocialPlatformId] = useState(SOCIAL_PLATFORMS[0].id);
     const [socialHandle, setSocialHandle] = useState(prefill?.socialHandle ?? "");
+
+    // --- Sealed identity ---
+    /** A path in the private bucket. There is no public URL for this. */
+    const [facePath, setFacePath] = useState("");
+    /** A short-lived signed URL, so they can see what they uploaded. */
+    const [facePreview, setFacePreview] = useState("");
+    /** Kept so "use it as my picture too" does not need a second crop. */
+    const [faceFile, setFaceFile] = useState<File | null>(null);
+
     const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
+    /** Which slot the image being cropped is destined for. */
+    const [cropTarget, setCropTarget] = useState<"face" | "avatar">("face");
     const [uploading, setUploading] = useState(false);
+    const [avatarUploading, setAvatarUploading] = useState(false);
     const [commitment, setCommitment] = useState(prefill?.commitment ?? "");
     const [cadence, setCadence] = useState<Cadence>("daily");
     const [proofDescription, setProofDescription] = useState(prefill?.proofDescription ?? "");
@@ -131,36 +163,101 @@ export default function SignRitual({ defaultFullName, defaultPhotoUrl, prefill }
     // The commitment step speaks the language of the register you picked.
     const prompt = commitmentPrompt(category || "");
 
+    // Social is optional now, so it only has to be valid if they typed one.
+    const socialReady = socialHandle.trim().length === 0 || handleReady;
+
     const identityReady =
+        usernameState.kind === "free" &&
         firstName.trim().length >= 2 &&
         lastName.trim().length >= 2 &&
-        photoUrl.length > 0 &&
-        handleReady;
+        facePath.length > 0 &&
+        socialReady;
     const commitmentReady =
         commitment.trim().length >= 10 && proofDescription.trim().length >= 5 && termReady;
     const promiseReady = promise.trim().length >= 10;
 
-    const pickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const pickPhoto = (target: "face" | "avatar") => (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         e.target.value = "";
-        if (!file || uploading) return;
+        if (!file || uploading || avatarUploading) return;
         setError(null);
+        setCropTarget(target);
         setPendingPhotoFile(file);
     };
 
     const uploadCroppedPhoto = async (cropped: File) => {
+        const target = cropTarget;
         setPendingPhotoFile(null);
-        setUploading(true);
         setError(null);
+
+        if (target === "avatar") {
+            setAvatarUploading(true);
+            try {
+                const formData = new FormData();
+                formData.append("file", cropped);
+                setAvatarUrl(await uploadProfileImage(formData));
+            } catch (err: any) {
+                setError(err?.message || "Failed to upload the picture");
+            } finally {
+                setAvatarUploading(false);
+            }
+            return;
+        }
+
+        // The face goes to the private bucket and comes back as a path.
+        setUploading(true);
         try {
             const formData = new FormData();
             formData.append("file", cropped);
-            const url = await uploadProfileImage(formData);
-            setPhotoUrl(url);
+            const path = await uploadFacePhoto(formData);
+            setFacePath(path);
+            setFaceFile(cropped);
+            setFacePreview((await getMyFaceUrl(path)) || "");
         } catch (err: any) {
             setError(err?.message || "Failed to upload the photo");
         } finally {
             setUploading(false);
+        }
+    };
+
+    /**
+     * Reuse the sealed face as the public picture. It is uploaded a second
+     * time, to the public bucket — the sealed copy stays where it is, so
+     * removing the picture later does not unseal anything.
+     */
+    const useFaceAsAvatar = async () => {
+        if (!faceFile || avatarUploading) return;
+        setAvatarUploading(true);
+        setError(null);
+        try {
+            const formData = new FormData();
+            formData.append("file", faceFile);
+            setAvatarUrl(await uploadProfileImage(formData));
+        } catch (err: any) {
+            setError(err?.message || "Failed to use that photo");
+        } finally {
+            setAvatarUploading(false);
+        }
+    };
+
+    /** Checked on blur rather than per keystroke: one query, not thirty. */
+    const checkUsername = async () => {
+        const raw = username.trim();
+        if (!raw) return setUsernameState({ kind: "idle" });
+
+        let cleaned: string;
+        try {
+            cleaned = validateUsername(raw);
+        } catch (err: any) {
+            return setUsernameState({ kind: "invalid", reason: err?.message || "Invalid username" });
+        }
+        setUsername(cleaned);
+        setUsernameState({ kind: "checking" });
+        try {
+            const free = await isUsernameAvailable(cleaned);
+            setUsernameState({ kind: free ? "free" : "taken" });
+        } catch {
+            setUsernameState({ kind: "invalid", reason: "Could not check that username" });
         }
     };
 
@@ -172,10 +269,12 @@ export default function SignRitual({ defaultFullName, defaultPhotoUrl, prefill }
             const result = await signContract({
                 category,
                 discipline: discipline.trim(),
-                fullName,
-                photoUrl,
+                username,
+                avatarUrl,
                 socialPlatform: socialPlatformId,
-                socialHandle: cleanedHandle,
+                socialHandle: socialHandle.trim() ? cleanedHandle : "",
+                realName: fullName,
+                facePath,
                 commitment: commitment.trim(),
                 cadence,
                 proofDescription: proofDescription.trim(),
@@ -300,105 +399,122 @@ export default function SignRitual({ defaultFullName, defaultPhotoUrl, prefill }
                                 file={pendingPhotoFile}
                                 aspect={1}
                                 outputWidth={600}
-                                title="Frame your face"
+                                title={cropTarget === "face" ? "Frame your face" : "Frame your picture"}
                                 onCancel={() => setPendingPhotoFile(null)}
                                 onApply={uploadCroppedPhoto}
                             />
                         )}
                         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-3">
-                            Put your name on it.
+                            Who you are here, and who you really are.
                         </h1>
-                        <p className="text-[var(--ink-soft)] leading-relaxed mb-6">
-                            The contract needs a real person. Your real name and your real
-                            face.
+                        <p className="text-[var(--ink-soft)] leading-relaxed mb-10">
+                            Everyone sees the first half. The second half is sealed against
+                            the contract, and only opens if you give up.
                         </p>
 
-                        {/* Said plainly and up front, because it is the one rule that
-                            gets an account deleted rather than a form rejected. */}
-                        <div
-                            className="border-l-2 pl-4 mb-10"
-                            style={{ borderColor: "var(--stamp-red)" }}
-                        >
-                            <p className="overline" style={{ color: "var(--stamp-red)" }}>
-                                Read this before you fill it in
-                            </p>
-                            <p className="type-doc mt-1 leading-relaxed text-[0.9375rem]">
-                                A fake name or a photo that is not you means your account is
-                                removed and your contract is deleted. No warning, no appeal.
-                                The whole thing only works because the person on the contract
-                                is you. If you are not willing to put your real name and your
-                                real face on it, LockIn Buddy is not for you.
-                            </p>
-                        </div>
+                        {/* ---------- In public ---------- */}
+                        <p className="overline border-b border-[var(--ink)] pb-2 mb-6">
+                            In public
+                        </p>
 
-                        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-8 mb-8">
-                            <label className="block">
-                                <span className="overline block mb-2">First name</span>
+                        <label className="block mb-8">
+                            <span className="overline block mb-2">Your username</span>
+                            <div className="flex items-baseline gap-1 border-b border-[var(--rule)] focus-within:border-[var(--ink)]">
+                                <span className="type-doc text-[var(--ink-soft)]">@</span>
                                 <input
                                     type="text"
-                                    maxLength={40}
-                                    value={firstName}
-                                    onChange={(e) => setFirstName(e.target.value)}
-                                    placeholder="Your given name"
-                                    autoComplete="given-name"
-                                    className={inputCls}
+                                    maxLength={20}
+                                    value={username}
+                                    onChange={(e) => {
+                                        setUsername(e.target.value.toLowerCase());
+                                        setUsernameState({ kind: "idle" });
+                                    }}
+                                    onBlur={checkUsername}
+                                    placeholder="whatpeoplecallyou"
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                    aria-label="Your username"
+                                    className="type-doc flex-1 bg-transparent border-0 focus:outline-none py-2 placeholder:text-[var(--ink-soft)]"
                                     autoFocus
                                 />
-                            </label>
-                            <label className="block">
-                                <span className="overline block mb-2">Last name</span>
-                                <input
-                                    type="text"
-                                    maxLength={40}
-                                    value={lastName}
-                                    onChange={(e) => setLastName(e.target.value)}
-                                    placeholder="Your family name"
-                                    autoComplete="family-name"
-                                    className={inputCls}
-                                />
-                            </label>
-                        </div>
+                            </div>
+                            <p
+                                className="text-sm mt-2"
+                                style={{
+                                    color:
+                                        usernameState.kind === "taken" || usernameState.kind === "invalid"
+                                            ? "var(--stamp-red)"
+                                            : "var(--ink-soft)",
+                                }}
+                                aria-live="polite"
+                            >
+                                {usernameState.kind === "checking" && "Checking…"}
+                                {usernameState.kind === "free" && `${atHandle(username)} is yours.`}
+                                {usernameState.kind === "taken" && "Taken. Try another one."}
+                                {usernameState.kind === "invalid" && usernameState.reason}
+                                {usernameState.kind === "idle" &&
+                                    "Letters, numbers and underscores. This is the name on everything you post."}
+                            </p>
+                        </label>
 
                         <div className="mb-8">
-                            <span className="overline block mb-2">A photo of your face</span>
-                            <div className="flex items-center gap-5">
-                                {photoUrl ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                        src={photoUrl}
-                                        alt="Your photo"
-                                        className="size-20 object-cover border border-[var(--rule)]"
-                                    />
-                                ) : (
-                                    <div className="size-20 border border-[var(--rule)] flex items-center justify-center">
-                                        <span className="overline">None</span>
-                                    </div>
-                                )}
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={uploading}
-                                    className="overline ink-link disabled:opacity-30"
-                                >
-                                    {uploading ? "Uploading…" : photoUrl ? "Change photo" : "Upload a photo"}
-                                </button>
+                            <span className="overline block mb-2">
+                                Your picture <span className="normal-case">(optional)</span>
+                            </span>
+                            <div className="flex items-center gap-5 flex-wrap">
+                                <Avatar username={username || "you"} avatarUrl={avatarUrl} size={80} />
+                                <div className="flex flex-col gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => avatarInputRef.current?.click()}
+                                        disabled={avatarUploading}
+                                        className="overline ink-link disabled:opacity-30 text-left"
+                                    >
+                                        {avatarUploading
+                                            ? "Uploading…"
+                                            : avatarUrl
+                                              ? "Change picture"
+                                              : "Upload a picture"}
+                                    </button>
+                                    {faceFile && (
+                                        <button
+                                            type="button"
+                                            onClick={useFaceAsAvatar}
+                                            disabled={avatarUploading}
+                                            className="overline ink-link disabled:opacity-30 text-left"
+                                        >
+                                            Use my face as my picture
+                                        </button>
+                                    )}
+                                    {avatarUrl && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setAvatarUrl("")}
+                                            className="overline ink-link text-left"
+                                        >
+                                            Remove picture
+                                        </button>
+                                    )}
+                                </div>
                                 <input
-                                    ref={fileInputRef}
+                                    ref={avatarInputRef}
                                     type="file"
                                     accept="image/jpeg,image/png,image/webp"
-                                    onChange={pickPhoto}
+                                    onChange={pickPhoto("avatar")}
                                     className="hidden"
                                 />
                             </div>
                             <p className="text-sm text-[var(--ink-soft)] mt-3">
-                                It must be a photo of you, clearly showing your face. Not a
-                                logo, not a cartoon, not a stranger, not your dog. If you
-                                break the contract, this is the face everyone sees.
+                                Anything you like, or nothing at all — a letter stands in for
+                                it. This is not the photo the contract holds against you.
                             </p>
                         </div>
 
                         <div className="mb-12">
-                            <span className="overline block mb-2">Where people can find you</span>
+                            <span className="overline block mb-2">
+                                Where people can find you{" "}
+                                <span className="normal-case">(optional, editable later)</span>
+                            </span>
                             <div className="flex items-baseline gap-4">
                                 <select
                                     value={socialPlatformId}
@@ -429,6 +545,110 @@ export default function SignRitual({ defaultFullName, defaultPhotoUrl, prefill }
                                     />
                                 </div>
                             </div>
+                            <p className="text-sm text-[var(--ink-soft)] mt-3">
+                                Shown on your profile from the moment you sign. Leave it
+                                empty if you would rather not.
+                            </p>
+                        </div>
+
+                        {/* ---------- Under seal ---------- */}
+                        <p
+                            className="overline border-b pb-2 mb-4"
+                            style={{ color: "var(--stamp-red)", borderColor: "var(--stamp-red)" }}
+                        >
+                            Under seal
+                        </p>
+                        <p className="type-doc leading-relaxed text-[0.9375rem] mb-8">
+                            This is the part that makes the contract mean something. Nobody
+                            can see it — not on the page, and not by asking the database,
+                            which refuses to hand it over. It is published on the front page
+                            on the day you give up, and on no other day.
+                        </p>
+
+                        {/* The one rule that costs an account rather than a form error. */}
+                        <div
+                            className="border-l-2 pl-4 mb-10"
+                            style={{ borderColor: "var(--stamp-red)" }}
+                        >
+                            <p className="overline" style={{ color: "var(--stamp-red)" }}>
+                                Read this before you fill it in
+                            </p>
+                            <p className="type-doc mt-1 leading-relaxed text-[0.9375rem]">
+                                A fake name or a photo that is not you means your account is
+                                removed and your contract is deleted. No warning, no appeal.
+                                The whole thing only works because the person under the seal
+                                is you. If you are not willing to put your real name and your
+                                real face behind it, LockIn Buddy is not for you.
+                            </p>
+                        </div>
+
+                        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-8 mb-8">
+                            <label className="block">
+                                <span className="overline block mb-2">First name</span>
+                                <input
+                                    type="text"
+                                    maxLength={40}
+                                    value={firstName}
+                                    onChange={(e) => setFirstName(e.target.value)}
+                                    placeholder="Your given name"
+                                    autoComplete="given-name"
+                                    className={inputCls}
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="overline block mb-2">Last name</span>
+                                <input
+                                    type="text"
+                                    maxLength={40}
+                                    value={lastName}
+                                    onChange={(e) => setLastName(e.target.value)}
+                                    placeholder="Your family name"
+                                    autoComplete="family-name"
+                                    className={inputCls}
+                                />
+                            </label>
+                        </div>
+
+                        <div className="mb-12">
+                            <span className="overline block mb-2">A photo of your face</span>
+                            <div className="flex items-center gap-5">
+                                {facePreview ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                        src={facePreview}
+                                        alt="The face you are signing with"
+                                        className="size-20 object-cover border border-[var(--rule)]"
+                                    />
+                                ) : (
+                                    <div className="size-20 border border-dashed border-[var(--rule)] flex items-center justify-center">
+                                        <span className="overline">Sealed</span>
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploading}
+                                    className="overline ink-link disabled:opacity-30"
+                                >
+                                    {uploading
+                                        ? "Uploading…"
+                                        : facePath
+                                          ? "Change photo"
+                                          : "Upload a photo"}
+                                </button>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    onChange={pickPhoto("face")}
+                                    className="hidden"
+                                />
+                            </div>
+                            <p className="text-sm text-[var(--ink-soft)] mt-3">
+                                It must be a photo of you, clearly showing your face. Not a
+                                logo, not a cartoon, not a stranger, not your dog. If you
+                                break the contract, this is the face everyone sees.
+                            </p>
                         </div>
 
                         {error && (
@@ -670,22 +890,31 @@ export default function SignRitual({ defaultFullName, defaultPhotoUrl, prefill }
                                 CONTRACT OF ACCOUNTABILITY
                             </h2>
 
+                            {/* Your own copy, so it shows both halves: the name and
+                                face here are what the seal is holding. */}
                             <div className="flex items-start gap-4 mb-6">
-                                {photoUrl && (
+                                {facePreview && (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img
-                                        src={photoUrl}
+                                        src={facePreview}
                                         alt={`Photo of ${fullName}`}
                                         className="size-16 object-cover border border-[var(--rule)] shrink-0"
                                     />
                                 )}
                                 <p>
-                                    I, <strong>{fullName}</strong> (
-                                    {socialLabel(socialPlatformId, cleanedHandle, "")}), sign this
-                                    contract in public, filed under{" "}
+                                    I, <strong>{fullName}</strong>, signing publicly as{" "}
+                                    <strong>{atHandle(username)}</strong>
+                                    {cleanedHandle && socialHandle.trim()
+                                        ? ` (${socialLabel(socialPlatformId, cleanedHandle, "")})`
+                                        : ""}
+                                    , sign this contract in public, filed under{" "}
                                     <strong>{filedUnder(category, discipline.trim())}</strong>.
                                 </p>
                             </div>
+                            <p className="mb-4 text-[var(--ink-soft)]">
+                                Only {atHandle(username)} appears on this contract while it
+                                holds. The name and face above are sealed until it breaks.
+                            </p>
 
                             <p className="mb-4">
                                 1. THE PROMISE. I will {commitment.trim().replace(/\.+$/, "")}.

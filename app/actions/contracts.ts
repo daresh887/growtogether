@@ -13,6 +13,7 @@ import {
     socialUrl as buildSocialUrl,
 } from "@/utils/contract-shared";
 import { heatScore } from "@/utils/ranking";
+import { validateRealName, validateUsername } from "@/utils/identity";
 
 // ============================================
 // TYPES
@@ -21,28 +22,49 @@ import { heatScore } from "@/utils/ranking";
 export type SignContractInput = {
     category: string;
     discipline: string;
-    fullName: string;
-    photoUrl: string;
+    // --- Public identity: what everyone sees from the moment you sign ---
+    username: string;
+    /** A picture of your choosing. Empty string means no picture at all. */
+    avatarUrl: string;
+    /** Optional, and editable later in settings. */
     socialPlatform: string;
     socialHandle: string;
+    // --- Sealed identity: held back until the contract is breached ---
+    realName: string;
+    /** A path inside the private `faces` bucket, never a public URL. */
+    facePath: string;
+    strokes: number[][][];
+    // --- Terms ---
     commitment: string;
     cadence: string;
     proofDescription: string;
     /** The signer's word to themselves that they will not break this. */
     promise: string;
     durationDays: number | null; // null = lifetime
-    strokes: number[][][];
     timezone: string;
 };
 
 export type ContractRecord = {
     id: string;
     userId: string;
-    signerName: string;
-    photoUrl: string;
+    // --- Public identity ---
+    username: string;
+    /** The chosen picture. Empty when they opted out of having one. */
+    avatarUrl: string;
     socialUrl: string;
     socialPlatform: string;
     socialHandle: string;
+    // --- Sealed identity ---
+    /** True when this viewer may see what is under the seal: the signer
+     *  themselves, or anybody at all once the contract is breached. */
+    revealed: boolean;
+    /** Null while sealed. */
+    realName: string | null;
+    /** A short-lived signed URL into the private bucket. Null while sealed. */
+    faceUrl: string | null;
+    /** Empty while sealed — people sign their own name. */
+    strokes: number[][][];
+    // --- Terms ---
     category: string;
     discipline: string;
     commitment: string;
@@ -58,7 +80,6 @@ export type ContractRecord = {
     breachedAt: string | null;
     resolvedAt: string | null;
     createdAt: string;
-    strokes: number[][][];
 };
 
 export type CommentRecord = {
@@ -86,9 +107,10 @@ export type CheckinRecord = {
     heat: number;
     /** Which day of this signer's run the post belongs to. The first post is day 1. */
     dayNumber?: number;
-    // Present on feeds, where entries come from many contracts
-    signerName?: string;
-    photoUrl?: string;
+    // Present on feeds, where entries come from many contracts. Always the
+    // public identity — the feed never carries a sealed name or face.
+    username?: string;
+    avatarUrl?: string;
     discipline?: string;
     category?: string;
     commitment?: string;
@@ -110,15 +132,39 @@ function safeHttps(url: unknown): string {
     return typeof url === "string" && url.startsWith("https://") && url.length <= 500 ? url : "";
 }
 
+/**
+ * A contract row on its way out to a page.
+ *
+ * The sealed half arrives as an embedded `contract_identity` row, which
+ * RLS has already decided about: it is present when the viewer owns the
+ * contract or the contract is breached, and absent otherwise. Nothing
+ * here re-implements that rule — it only reads whether the row came
+ * back. The public identity is stitched in afterwards by
+ * `applyContractProfiles`, which is why it starts empty.
+ */
 function mapContract(c: any): ContractRecord {
+    const sealed = Array.isArray(c.contract_identity)
+        ? c.contract_identity[0]
+        : c.contract_identity;
+    const revealed = Boolean(sealed);
+
     return {
         id: c.id,
         userId: c.user_id,
-        signerName: c.signer_name || "Unnamed signer",
-        photoUrl: safeHttps(c.photo_url),
-        socialUrl: safeHttps(c.social_url),
-        socialPlatform: c.social_platform || "",
-        socialHandle: c.social_handle || "",
+        username: "",
+        avatarUrl: "",
+        socialUrl: "",
+        socialPlatform: "",
+        socialHandle: "",
+        revealed,
+        realName: revealed ? (sealed.real_name || "Unnamed signer") : null,
+        // Turned into a signed URL by the caller; the raw path is useless
+        // on its own, since the bucket is private.
+        faceUrl: revealed ? (sealed.face_path || "") : null,
+        strokes:
+            revealed && Array.isArray(sealed.signature_strokes)
+                ? sealed.signature_strokes
+                : [],
         category: c.category,
         discipline: c.discipline || "",
         commitment: c.commitment,
@@ -133,9 +179,60 @@ function mapContract(c: any): ContractRecord {
         breachedAt: c.breached_at,
         resolvedAt: c.resolved_at,
         createdAt: c.created_at,
-        strokes: Array.isArray(c.signature_strokes) ? c.signature_strokes : [],
     };
 }
+
+/** Everything a contract row needs, sealed half included. RLS filters it. */
+const CONTRACT_SELECT =
+    "*, contract_identity(real_name, face_path, signature_strokes)";
+
+/**
+ * Stitches the public identity onto contracts, and swaps each revealed
+ * face path for a signed URL. One profiles query and one signing call
+ * per face, rather than per row.
+ */
+async function applyContractProfiles(supabase: any, contracts: ContractRecord[]) {
+    if (contracts.length === 0) return;
+
+    const profiles = await getPublicProfiles([...new Set(contracts.map((c) => c.userId))]);
+
+    for (const contract of contracts) {
+        const profile = profiles.get(contract.userId);
+        contract.username = profile?.username || "someone";
+        contract.avatarUrl = profile?.avatarUrl || "";
+        contract.socialPlatform = profile?.socialPlatform || "";
+        contract.socialHandle = profile?.socialHandle || "";
+        contract.socialUrl =
+            profile?.socialPlatform && profile?.socialHandle
+                ? safeHttps(buildSocialUrl(profile.socialPlatform, profile.socialHandle))
+                : "";
+    }
+
+    await Promise.all(
+        contracts.map(async (contract) => {
+            if (!contract.faceUrl) return;
+            contract.faceUrl = await signedFaceUrl(supabase, contract.faceUrl);
+        })
+    );
+}
+
+/**
+ * A time-limited URL for a face in the private bucket. Returns null if
+ * signing fails, which is also what a viewer without the right to see it
+ * gets — storage RLS applies the same seal as the table.
+ */
+async function signedFaceUrl(supabase: any, path: string): Promise<string | null> {
+    if (!path) return null;
+    const { data, error } = await supabase.storage
+        .from("faces")
+        .createSignedUrl(path, FACE_URL_TTL_SECONDS);
+    if (error || !data?.signedUrl) return null;
+    return data.signedUrl;
+}
+
+/** Long enough to render the page and be cached briefly, short enough
+ *  that a copied URL stops working. */
+const FACE_URL_TTL_SECONDS = 60 * 60;
 
 function assertValidTimezone(tz: string): string {
     try {
@@ -195,24 +292,38 @@ export async function signContract(input: SignContractInput) {
     if (discipline.length < 2) throw new Error("Name what you are working on");
     if (discipline.length > 40) throw new Error("Focus must be under 40 characters");
 
-    // Identity
-    const fullName = (input.fullName || "").trim().replace(/\s+/g, " ");
-    if (fullName.length < 5 || !fullName.includes(" ")) throw new Error("Enter your full name, first and last");
-    if (fullName.length > 80) throw new Error("Full name must be under 80 characters");
-    const photoUrl = (input.photoUrl || "").trim();
-    if (!photoUrl.startsWith("https://") || photoUrl.length > 500) {
-        throw new Error("A photo of you is required");
+    // --- Public identity: this is all anyone sees until they fail ---
+    const username = validateUsername(input.username);
+    const avatarUrl = (input.avatarUrl || "").trim();
+    if (avatarUrl && (!avatarUrl.startsWith("https://") || avatarUrl.length > 500)) {
+        throw new Error("Invalid profile picture");
     }
-    const platform = socialPlatform(input.socialPlatform || "");
-    if (!platform) throw new Error("Choose where people can find you");
-    const socialHandle = cleanHandle(platform.id, input.socialHandle || "");
-    if (socialHandle.length < 2 || socialHandle.length > 60 || /\s/.test(socialHandle)) {
-        throw new Error("Add your handle");
+
+    // Social is optional, and editable in settings afterwards.
+    let socialPlatformId = "";
+    let socialHandleValue = "";
+    const rawHandle = (input.socialHandle || "").trim();
+    if (rawHandle) {
+        const platform = socialPlatform(input.socialPlatform || "");
+        if (!platform) throw new Error("Choose where people can find you");
+        socialHandleValue = cleanHandle(platform.id, rawHandle);
+        if (socialHandleValue.length < 2 || socialHandleValue.length > 60 || /\s/.test(socialHandleValue)) {
+            throw new Error("Add a valid handle, or leave it empty");
+        }
+        if (platform.id === "website" && !socialHandleValue.includes(".")) {
+            throw new Error("Enter a full website address");
+        }
+        socialPlatformId = platform.id;
     }
-    if (platform.id === "website" && !socialHandle.includes(".")) {
-        throw new Error("Enter a full website address");
+
+    // --- Sealed identity: held back until the contract is breached ---
+    const realName = validateRealName(input.realName);
+    const facePath = (input.facePath || "").trim();
+    // The path is produced by uploadFacePhoto, which always scopes it to
+    // the caller. Re-check, because this input arrives from the client.
+    if (!facePath || facePath.length > 300 || !facePath.startsWith(`${user.id}/`)) {
+        throw new Error("A photo of your face is required");
     }
-    const resolvedSocialUrl = buildSocialUrl(platform.id, socialHandle);
 
     // Terms
     const commitment = (input.commitment || "").trim();
@@ -259,6 +370,29 @@ export async function signContract(input: SignContractInput) {
             ? null
             : new Date(effectiveAt.getTime() + durationDays * 86_400_000);
 
+    // The public identity has to land before the contract does: the feed,
+    // the comment trigger and the contract page all read the username off
+    // the profile, so a contract without one would render as "someone".
+    const { error: profileError } = await supabase.from("profiles").upsert({
+        id: user.id,
+        username,
+        avatar_url: avatarUrl,
+        social_platform: socialPlatformId,
+        social_handle: socialHandleValue,
+        updated_at: new Date().toISOString(),
+    });
+
+    if (profileError) {
+        if (profileError.code === "23505") {
+            throw new Error("That username is taken. Pick another one");
+        }
+        console.error("Error saving public identity:", profileError);
+        throw new Error(
+            `Failed to save your username: ${profileError.message}. ` +
+            "If this mentions a missing column, run migrations/add_pseudonymous_identity.sql in Supabase."
+        );
+    }
+
     const { data: contract, error: contractError } = await supabase
         .from("contracts")
         .insert({
@@ -272,12 +406,6 @@ export async function signContract(input: SignContractInput) {
             ends_at: endsAt ? endsAt.toISOString() : null,
             forfeit: STANDARD_PENALTY,
             promise,
-            signature_strokes: input.strokes,
-            signer_name: fullName,
-            photo_url: photoUrl,
-            social_url: resolvedSocialUrl,
-            social_platform: platform.id,
-            social_handle: socialHandle,
             timezone,
             status: "active",
             effective_at: effectiveAt.toISOString(),
@@ -293,10 +421,30 @@ export async function signContract(input: SignContractInput) {
         throw new Error("Failed to record the contract");
     }
 
+    // The sealed half. If this fails the contract has no stake behind it,
+    // so the contract goes with it rather than standing as an empty threat.
+    const { error: sealError } = await supabase.from("contract_identity").insert({
+        contract_id: contract.id,
+        user_id: user.id,
+        real_name: realName,
+        face_path: facePath,
+        signature_strokes: input.strokes,
+    });
+
+    if (sealError) {
+        await supabase.from("contracts").delete().eq("id", contract.id);
+        console.error("Error sealing identity:", sealError);
+        throw new Error(
+            `Failed to seal your identity: ${sealError.message}. ` +
+            "If this mentions a missing table, run migrations/add_pseudonymous_identity.sql in Supabase."
+        );
+    }
+
+    // Events are public, so this one says nothing the seal is holding.
     await supabase.from("contract_events").insert({
         contract_id: contract.id,
         type: "signed",
-        detail: `Locked in by ${fullName}. In effect from ${effectiveAt.toISOString()}.`,
+        detail: `Locked in by @${username}. In effect from ${effectiveAt.toISOString()}.`,
     });
 
     revalidatePath("/");
@@ -307,6 +455,66 @@ export async function signContract(input: SignContractInput) {
 // ============================================
 // PROOF
 // ============================================
+
+/**
+ * The face you sign with. Goes to the private `faces` bucket and returns
+ * a storage path, not a URL — there is no public URL to leak. It becomes
+ * viewable to other people only when the contract is breached, and then
+ * only through a short-lived signed URL.
+ */
+export async function uploadFacePhoto(formData: FormData): Promise<string> {
+    const supabase = await createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) throw new Error("You must be logged in to upload a photo");
+
+    const file = formData.get("file") as File;
+    if (!file) throw new Error("No file provided");
+
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+        throw new Error("Please upload a JPEG, PNG, GIF, or WebP image");
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        throw new Error("Photo too large. Maximum size is 5MB");
+    }
+
+    // The first path segment is the owner, which is what the bucket's
+    // policy checks. Derived here, never taken from the filename.
+    const ext = safeExtension(file.name);
+    const path = `${user.id}/${Date.now()}.${ext}`;
+
+    const { data, error } = await supabase.storage
+        .from("faces")
+        .upload(path, file, { cacheControl: "3600", upsert: false });
+
+    if (error) {
+        console.error("Error uploading face photo:", error);
+        throw new Error(
+            `Failed to upload the photo: ${error.message}. ` +
+            "If this mentions a missing bucket or a policy, run migrations/add_pseudonymous_identity.sql in Supabase."
+        );
+    }
+
+    return data.path;
+}
+
+/**
+ * A preview of your own sealed face, for the signing ritual and settings.
+ * Only ever your own: storage RLS refuses anyone else's while sealed.
+ */
+export async function getMyFaceUrl(path: string): Promise<string | null> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !path.startsWith(`${user.id}/`)) return null;
+    return signedFaceUrl(supabase, path);
+}
+
+/** An extension we are willing to put in a storage key, or "jpg". */
+function safeExtension(filename: string): string {
+    const raw = (filename || "").split(".").pop() || "";
+    return /^[a-zA-Z0-9]{1,5}$/.test(raw) ? raw.toLowerCase() : "jpg";
+}
 
 export async function uploadProofImage(formData: FormData): Promise<string> {
     const supabase = await createClient();
@@ -416,7 +624,7 @@ export async function getWallContracts(limit: number = 60): Promise<ContractReco
 
     const { data, error } = await supabase
         .from("contracts")
-        .select("*")
+        .select(CONTRACT_SELECT)
         .order("created_at", { ascending: false })
         .limit(limit);
 
@@ -425,7 +633,9 @@ export async function getWallContracts(limit: number = 60): Promise<ContractReco
         return [];
     }
 
-    return data.map(mapContract);
+    const contracts = data.map(mapContract);
+    await applyContractProfiles(supabase, contracts);
+    return contracts;
 }
 
 export async function getContract(id: string): Promise<{
@@ -441,11 +651,14 @@ export async function getContract(id: string): Promise<{
 
     const { data: contract, error } = await supabase
         .from("contracts")
-        .select("*")
+        .select(CONTRACT_SELECT)
         .eq("id", id)
         .single();
 
     if (error || !contract) return null;
+
+    const record = mapContract(contract);
+    await applyContractProfiles(supabase, [record]);
 
     const { data: checkins } = await supabase
         .from("checkins")
@@ -495,7 +708,7 @@ export async function getContract(id: string): Promise<{
     }
 
     return {
-        contract: mapContract(contract),
+        contract: record,
         streak,
         checkins: entries,
         isOwner: user?.id === contract.user_id,
@@ -580,19 +793,17 @@ export async function addComment(checkinId: string, content: string, parentId?: 
         resolvedParentId = parent.parent_id || parent.id;
     }
 
-    const [{ data: ownContract }, { data: profile }] = await Promise.all([
-        supabase
-            .from("contracts")
-            .select("signer_name, photo_url")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-        supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single(),
-    ]);
+    // You comment as your username, never as the name under the seal. The
+    // database trigger stamps these from the profile as well, so this is
+    // belt and braces rather than the only guard.
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("username, avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
 
-    const authorName = ownContract?.signer_name || profile?.display_name || "Someone";
-    const authorPhoto = ownContract?.photo_url || profile?.avatar_url || "";
+    const authorName = profile?.username || "someone";
+    const authorPhoto = profile?.avatar_url || "";
 
     const { error } = await supabase.from("checkin_comments").insert({
         checkin_id: checkinId,
@@ -663,22 +874,19 @@ export async function addWallComment(contractId: string, content: string, parent
         resolvedParentId = parent.parent_id || parent.id;
     }
 
-    const [{ data: ownContract }, { data: profile }] = await Promise.all([
-        supabase
-            .from("contracts")
-            .select("signer_name, photo_url")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-        supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single(),
-    ]);
+    // Humiliating someone does not cost you your own seal: you post to the
+    // wall under your username, exactly as you do everywhere else.
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("username, avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
 
     const { error } = await supabase.from("contract_comments").insert({
         contract_id: contractId,
         user_id: user.id,
-        author_name: ownContract?.signer_name || profile?.display_name || "Someone",
-        author_photo: ownContract?.photo_url || profile?.avatar_url || "",
+        author_name: profile?.username || "someone",
+        author_photo: profile?.avatar_url || "",
         parent_id: resolvedParentId,
         content: trimmed,
     });
@@ -825,14 +1033,18 @@ export async function getMyContracts(): Promise<ContractRecord[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
+    // Your own contracts always come back revealed — the seal is aimed at
+    // everyone else, and you need to see what you signed with.
     const { data, error } = await supabase
         .from("contracts")
-        .select("*")
+        .select(CONTRACT_SELECT)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
     if (error || !data) return [];
-    return data.map(mapContract);
+    const contracts = data.map(mapContract);
+    await applyContractProfiles(supabase, contracts);
+    return contracts;
 }
 
 /**
@@ -844,13 +1056,15 @@ export async function getCategoryContracts(category: string): Promise<ContractRe
 
     const { data, error } = await supabase
         .from("contracts")
-        .select("*")
+        .select(CONTRACT_SELECT)
         .eq("category", category)
         .order("created_at", { ascending: false })
         .limit(100);
 
     if (error || !data) return [];
-    return data.map(mapContract);
+    const contracts = data.map(mapContract);
+    await applyContractProfiles(supabase, contracts);
+    return contracts;
 }
 
 function mapComments(rows: any): CommentRecord[] {
@@ -861,7 +1075,7 @@ function mapComments(rows: any): CommentRecord[] {
     const all = rows.map((r: any) => ({
         id: r.id,
         authorId: r.user_id || "",
-        authorName: r.author_name || "Someone",
+        authorName: r.author_name || "someone",
         authorPhoto: safeHttps(r.author_photo),
         content: r.content,
         createdAt: r.created_at,
@@ -901,13 +1115,19 @@ async function applyLiveProfiles(entries: CheckinRecord[]) {
     const paint = (comments: CommentRecord[]) => {
         for (const comment of comments) {
             const live = profiles.get(comment.authorId);
-            if (live?.avatarUrl) comment.authorPhoto = live.avatarUrl;
+            if (live) {
+                comment.authorPhoto = live.avatarUrl;
+                if (live.username) comment.authorName = live.username;
+            }
             paint(comment.replies);
         }
     };
     for (const entry of entries) {
         const live = profiles.get(entry.userId);
-        if (live?.avatarUrl) entry.photoUrl = live.avatarUrl;
+        if (live) {
+            entry.avatarUrl = live.avatarUrl;
+            entry.username = live.username || "someone";
+        }
         paint(entry.comments);
     }
 }
@@ -947,8 +1167,10 @@ function mapFeedCheckin(c: any, currentUserId: string | null): CheckinRecord {
         ...mapReactions(c.checkin_reactions, currentUserId),
         createdAt: c.created_at,
         heat: checkinHeat(c),
-        signerName: c.contracts?.signer_name || "Unnamed signer",
-        photoUrl: safeHttps(c.contracts?.photo_url),
+        // Filled in by applyLiveProfiles — the feed reads identity off the
+        // profile, so there is no route by which a sealed name reaches it.
+        username: "someone",
+        avatarUrl: "",
         discipline: c.contracts?.discipline || "",
         category: c.contracts?.category || "",
         commitment: c.contracts?.commitment || "",
@@ -958,7 +1180,7 @@ function mapFeedCheckin(c: any, currentUserId: string | null): CheckinRecord {
 
 const FEED_SELECT =
     "id, contract_id, user_id, content, images, created_at, " +
-    "contracts!inner(category, signer_name, discipline, commitment, cadence, photo_url, timezone), " +
+    "contracts!inner(category, discipline, commitment, cadence, timezone), " +
     "checkin_comments(id, user_id, author_name, author_photo, content, created_at, parent_id), " +
     "checkin_reactions(user_id, value, created_at)";
 
@@ -1085,18 +1307,16 @@ export async function getBreachedContracts(limit: number = 20): Promise<Contract
 
     const { data, error } = await supabase
         .from("contracts")
-        .select("*")
+        .select(CONTRACT_SELECT)
         .eq("status", "breached")
         .order("breached_at", { ascending: false })
         .limit(limit);
 
     if (error || !data) return [];
 
+    // Every row here is breached, so the seal is off: `revealed` comes back
+    // true and the real name and face are populated.
     const contracts = data.map(mapContract);
-    const profiles = await getPublicProfiles([...new Set(contracts.map((c) => c.userId))]);
-    for (const contract of contracts) {
-        const live = profiles.get(contract.userId);
-        if (live?.avatarUrl) contract.photoUrl = live.avatarUrl;
-    }
+    await applyContractProfiles(supabase, contracts);
     return contracts;
 }

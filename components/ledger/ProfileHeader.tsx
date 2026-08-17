@@ -1,7 +1,11 @@
 import { Stamp } from "./Stamp";
+import Avatar from "./Avatar";
+import { atHandle } from "@/utils/identity";
 
 type Props = {
+    /** The handle while the contract holds; the real name once it breaks. */
     name: string;
+    username: string;
     avatarUrl: string;
     bio: string;
     /** "Build · dropshipping" */
@@ -22,6 +26,7 @@ type Props = {
  */
 export default function ProfileHeader({
     name,
+    username,
     avatarUrl,
     bio,
     filedUnder,
@@ -31,22 +36,18 @@ export default function ProfileHeader({
     stamp,
     failed = false,
 }: Props) {
+    // Once the name is out, the handle still belongs above the fold: it is
+    // how everyone here knew them while they were still going.
+    const showHandleUnderName = failed && name !== atHandle(username);
+
     return (
         <header className="pb-8">
             <div className="flex items-start gap-5">
-                {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                        src={avatarUrl}
-                        alt={`Photo of ${name}`}
-                        className="size-20 sm:size-24 object-cover border border-[var(--rule)] shrink-0"
-                    />
-                ) : (
-                    <div
-                        className="size-20 sm:size-24 border border-[var(--rule)] shrink-0"
-                        aria-hidden="true"
-                    />
-                )}
+                <Avatar
+                    username={username}
+                    avatarUrl={avatarUrl}
+                    sizeClass="size-20 sm:size-24"
+                />
 
                 <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-4">
@@ -59,6 +60,10 @@ export default function ProfileHeader({
                             </Stamp>
                         )}
                     </div>
+
+                    {showHandleUnderName && (
+                        <p className="overline mt-1">posted here as {atHandle(username)}</p>
+                    )}
 
                     <p className="overline mt-2">
                         {filedUnder} · {posts} {posts === 1 ? "post" : "posts"}

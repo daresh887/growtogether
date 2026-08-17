@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { CommentRecord } from "@/app/actions/contracts";
+import { atHandle } from "@/utils/identity";
+import Avatar from "./Avatar";
 import CommentForm from "./CommentForm";
 
 type Props = {
@@ -24,18 +26,16 @@ function CommentRow({
 }) {
     return (
         <div className="flex gap-3 mt-3 first:mt-0">
-            {comment.authorPhoto ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                    src={comment.authorPhoto}
-                    alt={`Photo of ${comment.authorName}`}
-                    className="size-6 object-cover border border-[var(--rule)] shrink-0 mt-0.5"
-                />
-            ) : (
-                <div className="size-6 border border-[var(--rule)] shrink-0 mt-0.5" aria-hidden="true" />
-            )}
+            {/* Comment authors are usernames — the database trigger stamps
+                them from the profile, so a sealed name cannot land here. */}
+            <Avatar
+                username={comment.authorName}
+                avatarUrl={comment.authorPhoto}
+                size={24}
+                className="mt-0.5"
+            />
             <p className="text-sm leading-relaxed min-w-0">
-                <span className="font-medium">{comment.authorName}</span> {comment.content}
+                <span className="font-medium">{atHandle(comment.authorName)}</span> {comment.content}
                 {canComment && (
                     <>
                         {" "}

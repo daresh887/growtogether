@@ -2,17 +2,31 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { validateUsername } from "@/utils/identity";
+import { cleanHandle, socialPlatform } from "@/utils/contract-shared";
 
-// The contract snapshots the name, face and social you signed with, so
-// a breach always publishes the person who made the promise. The
-// profile below is the living version: how you appear everywhere else.
+// This is the whole of your public identity: a username, a picture if
+// you want one, a bio, and a social link if you choose to add one. The
+// real name and the face you signed with are not here — they live
+// sealed in contract_identity and surface only on a breach.
 
 export type ProfileData = {
     id: string;
     email: string;
+    username: string;
     display_name: string;
     avatar_url: string | null;
     bio: string;
+    social_platform: string;
+    social_handle: string;
+};
+
+export type PublicProfile = {
+    username: string;
+    avatarUrl: string;
+    bio: string;
+    socialPlatform: string;
+    socialHandle: string;
 };
 
 export async function getProfile(): Promise<ProfileData | null> {
@@ -25,17 +39,43 @@ export async function getProfile(): Promise<ProfileData | null> {
 
     const { data: row } = await supabase
         .from("profiles")
-        .select("avatar_url, bio, display_name")
+        .select("avatar_url, bio, display_name, username, social_platform, social_handle")
         .eq("id", user.id)
         .maybeSingle();
 
     return {
         id: user.id,
         email: user.email || "",
+        username: row?.username || "",
         display_name: row?.display_name || metadata.display_name || metadata.full_name || "",
         avatar_url: row?.avatar_url || metadata.avatar_url || null,
         bio: row?.bio || "",
+        social_platform: row?.social_platform || "",
+        social_handle: row?.social_handle || "",
     };
+}
+
+/** Whether a username is free. Case-insensitive, since we store lowercase. */
+export async function isUsernameAvailable(raw: string): Promise<boolean> {
+    let username: string;
+    try {
+        username = validateUsername(raw);
+    } catch {
+        return false;
+    }
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { data } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username)
+        .maybeSingle();
+
+    // Your own username is available to you — re-saving settings unchanged
+    // should not read as a collision.
+    return !data || data.id === user?.id;
 }
 
 /**
@@ -43,21 +83,21 @@ export async function getProfile(): Promise<ProfileData | null> {
  */
 export async function getPublicProfiles(
     userIds: string[]
-): Promise<Map<string, { avatarUrl: string; bio: string }>> {
-    const map = new Map<string, { avatarUrl: string; bio: string }>();
+): Promise<Map<string, PublicProfile>> {
+    const map = new Map<string, PublicProfile>();
     if (userIds.length === 0) return map;
 
     const supabase = await createClient();
     const { data, error } = await supabase
         .from("profiles")
-        .select("id, avatar_url, bio")
+        .select("id, username, avatar_url, bio, social_platform, social_handle")
         .in("id", userIds);
 
     if (error) {
         console.error(
             "Could not read profiles:",
             error.message,
-            "— if this mentions a missing table, column or policy, run migrations/add_profile_bio.sql in Supabase."
+            "— if this mentions a missing table, column or policy, run migrations/add_pseudonymous_identity.sql in Supabase."
         );
     }
 
@@ -68,18 +108,34 @@ export async function getPublicProfiles(
             typeof row.avatar_url === "string" && row.avatar_url.startsWith("https://")
                 ? row.avatar_url
                 : "";
-        map.set(row.id, { avatarUrl, bio: (row.bio || "").slice(0, 300) });
+        map.set(row.id, {
+            username: typeof row.username === "string" ? row.username : "",
+            avatarUrl,
+            bio: (row.bio || "").slice(0, 300),
+            socialPlatform: row.social_platform || "",
+            socialHandle: row.social_handle || "",
+        });
     }
     return map;
 }
 
-export async function updateMyProfile(input: { avatarUrl?: string; bio?: string }) {
+export async function updateMyProfile(input: {
+    username?: string;
+    avatarUrl?: string;
+    bio?: string;
+    socialPlatform?: string;
+    socialHandle?: string;
+}) {
     const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) throw new Error("You must be logged in");
 
     const update: Record<string, any> = { id: user.id, updated_at: new Date().toISOString() };
+
+    if (input.username !== undefined) {
+        update.username = validateUsername(input.username);
+    }
 
     if (input.bio !== undefined) {
         const bio = input.bio.trim();
@@ -88,6 +144,7 @@ export async function updateMyProfile(input: { avatarUrl?: string; bio?: string 
     }
 
     if (input.avatarUrl !== undefined) {
+        // An empty string is a real choice here: no picture at all.
         if (input.avatarUrl && !input.avatarUrl.startsWith("https://")) {
             throw new Error("Invalid photo");
         }
@@ -95,13 +152,37 @@ export async function updateMyProfile(input: { avatarUrl?: string; bio?: string 
         await supabase.auth.updateUser({ data: { avatar_url: input.avatarUrl } });
     }
 
+    // Social is optional and always public. Clearing the handle clears both.
+    if (input.socialHandle !== undefined || input.socialPlatform !== undefined) {
+        const rawHandle = (input.socialHandle || "").trim();
+        if (!rawHandle) {
+            update.social_platform = "";
+            update.social_handle = "";
+        } else {
+            const platform = socialPlatform(input.socialPlatform || "");
+            if (!platform) throw new Error("Choose where people can find you");
+            const handle = cleanHandle(platform.id, rawHandle);
+            if (handle.length < 2 || handle.length > 60 || /\s/.test(handle)) {
+                throw new Error("Add a valid handle, or leave it empty");
+            }
+            if (platform.id === "website" && !handle.includes(".")) {
+                throw new Error("Enter a full website address");
+            }
+            update.social_platform = platform.id;
+            update.social_handle = handle;
+        }
+    }
+
     const { error } = await supabase.from("profiles").upsert(update);
 
     if (error) {
+        if (error.code === "23505") {
+            throw new Error("That username is taken. Pick another one");
+        }
         console.error("Error saving profile:", error);
         throw new Error(
             `Failed to save: ${error.message}. ` +
-            "If this mentions a missing table or column, run migrations/add_profile_bio.sql in Supabase."
+            "If this mentions a missing table or column, run migrations/add_pseudonymous_identity.sql in Supabase."
         );
     }
 

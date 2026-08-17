@@ -24,7 +24,13 @@ export default async function SettingsPage() {
                 </h1>
 
                 <p className="overline mb-2 border-b border-[var(--ink)] pb-3">Your profile</p>
-                <ProfileEditor avatarUrl={profile?.avatar_url || ""} bio={profile?.bio || ""} />
+                <ProfileEditor
+                    username={profile?.username || ""}
+                    avatarUrl={profile?.avatar_url || ""}
+                    bio={profile?.bio || ""}
+                    socialPlatform={profile?.social_platform || ""}
+                    socialHandle={profile?.social_handle || ""}
+                />
 
                 <p className="overline mt-16 mb-2 border-b border-[var(--ink)] pb-3">Your account</p>
                 <div className="py-5 border-b border-[var(--rule)]">

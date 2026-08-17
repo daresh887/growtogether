@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { CheckinRecord } from "@/app/actions/contracts";
+import { atHandle } from "@/utils/identity";
+import Avatar from "./Avatar";
 import Comments from "./Comments";
 import ReactionButtons from "./ReactionButtons";
 
@@ -12,8 +14,10 @@ type Props = {
 };
 
 /**
- * One post: the person's face and full name, their commitment and
- * streak, what they wrote, their photos, likes, and comments.
+ * One post: whoever posted it, under the username and picture they chose,
+ * with their commitment, what they wrote, their photos, likes and
+ * comments. The feed never carries a real name — that stays sealed until
+ * the contract behind the post is broken.
  */
 export default function ProofEntry({ entry, canComment = false, linkAuthor = true }: Props) {
     const date = new Date(entry.createdAt).toLocaleString("en-GB", {
@@ -27,31 +31,24 @@ export default function ProofEntry({ entry, canComment = false, linkAuthor = tru
     // Which day of their run this post is. The first post is day 1.
     const day = entry.dayNumber ?? 1;
 
+    const handle = entry.username || "someone";
+
     const commitment = (entry.commitment || "").replace(/\.+$/, "");
     const shortCommitment = commitment.length > 70 ? commitment.slice(0, 69).trimEnd() + "…" : commitment;
 
     return (
         <li className="py-7 border-b border-[var(--rule)]">
             <div className="flex gap-4">
-                {entry.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                        src={entry.photoUrl}
-                        alt={`Photo of ${entry.signerName}`}
-                        className="size-12 object-cover border border-[var(--rule)] shrink-0"
-                    />
-                ) : (
-                    <div className="size-12 border border-[var(--rule)] shrink-0" aria-hidden="true" />
-                )}
+                <Avatar username={handle} avatarUrl={entry.avatarUrl} size={48} />
 
                 <div className="min-w-0 flex-1">
                     <p className="flex items-baseline gap-3">
                         {linkAuthor ? (
                             <Link href={`/contracts/${entry.contractId}`} className="font-semibold ink-link">
-                                {entry.signerName}
+                                {atHandle(handle)}
                             </Link>
                         ) : (
-                            <span className="font-semibold">{entry.signerName}</span>
+                            <span className="font-semibold">{atHandle(handle)}</span>
                         )}
                         <span className="overline">{date}</span>
                         {/* How far into the contract this post is. */}
@@ -70,7 +67,7 @@ export default function ProofEntry({ entry, canComment = false, linkAuthor = tru
                                 <img
                                     key={url}
                                     src={url}
-                                    alt={`Photo posted by ${entry.signerName}`}
+                                    alt={`Photo posted by ${atHandle(handle)}`}
                                     loading="lazy"
                                     className="max-h-72 max-w-full border border-[var(--rule)]"
                                 />

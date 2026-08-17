@@ -17,7 +17,7 @@ export default async function LockInPage() {
             </div>
             <SignRitual
                 defaultFullName={profile?.display_name || ""}
-                defaultPhotoUrl={profile?.avatar_url || ""}
+                defaultAvatarUrl={profile?.avatar_url || ""}
             />
         </>
     );
