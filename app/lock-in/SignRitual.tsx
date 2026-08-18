@@ -60,11 +60,10 @@ type UsernameState =
 const STEPS = ["The category", "Who you are", "The commitment", "The punishment", "Lock in"];
 
 const HOUSE_RULES = [
-    "You sign a contract that says what you will do.",
+    "You sign a contract where you promise to commit to something.",
     "It takes effect today. Your first post is your introduction.",
     "After that you post proof of your progress, as often as the contract says.",
-    "Everyone sees your username. Nobody sees your real name or your face.",
-    "If you stop, the seal comes off and both are published here.",
+    "If you give up, your real name, your face and your commitment promise is published on the front page and on our X. Everybody will see that you failed.",
 ];
 
 const ACK_PHRASE = "I understand";
@@ -405,17 +404,12 @@ export default function SignRitual({ defaultFullName, defaultAvatarUrl, prefill 
                             />
                         )}
                         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-3">
-                            Who you are here, and who you really are.
+                            Your profile.
                         </h1>
                         <p className="text-[var(--ink-soft)] leading-relaxed mb-10">
-                            Everyone sees the first half. The second half is sealed against
-                            the contract, and only opens if you give up.
                         </p>
 
                         {/* ---------- In public ---------- */}
-                        <p className="overline border-b border-[var(--ink)] pb-2 mb-6">
-                            In public
-                        </p>
 
                         <label className="block mb-8">
                             <span className="overline block mb-2">Your username</span>
@@ -504,16 +498,12 @@ export default function SignRitual({ defaultFullName, defaultAvatarUrl, prefill 
                                     className="hidden"
                                 />
                             </div>
-                            <p className="text-sm text-[var(--ink-soft)] mt-3">
-                                Anything you like, or nothing at all — a letter stands in for
-                                it. This is not the photo the contract holds against you.
-                            </p>
                         </div>
 
                         <div className="mb-12">
                             <span className="overline block mb-2">
                                 Where people can find you{" "}
-                                <span className="normal-case">(optional, editable later)</span>
+                                <span className="normal-case">(optional)</span>
                             </span>
                             <div className="flex items-baseline gap-4">
                                 <select
@@ -545,10 +535,6 @@ export default function SignRitual({ defaultFullName, defaultAvatarUrl, prefill 
                                     />
                                 </div>
                             </div>
-                            <p className="text-sm text-[var(--ink-soft)] mt-3">
-                                Shown on your profile from the moment you sign. Leave it
-                                empty if you would rather not.
-                            </p>
                         </div>
 
                         {/* ---------- Under seal ---------- */}
@@ -559,10 +545,7 @@ export default function SignRitual({ defaultFullName, defaultAvatarUrl, prefill 
                             Under seal
                         </p>
                         <p className="type-doc leading-relaxed text-[0.9375rem] mb-8">
-                            This is the part that makes the contract mean something. Nobody
-                            can see it — not on the page, and not by asking the database,
-                            which refuses to hand it over. It is published on the front page
-                            on the day you give up, and on no other day.
+                            The information you give here will only be published if you fail your contract.
                         </p>
 
                         {/* The one rule that costs an account rather than a form error. */}
@@ -575,9 +558,8 @@ export default function SignRitual({ defaultFullName, defaultAvatarUrl, prefill 
                             </p>
                             <p className="type-doc mt-1 leading-relaxed text-[0.9375rem]">
                                 A fake name or a photo that is not you means your account is
-                                removed and your contract is deleted. No warning, no appeal.
-                                The whole thing only works because the person under the seal
-                                is you. If you are not willing to put your real name and your
+                                removed. You will get no warning.
+                                If you are not willing to put your real name and your
                                 real face behind it, LockIn Buddy is not for you.
                             </p>
                         </div>
@@ -645,8 +627,7 @@ export default function SignRitual({ defaultFullName, defaultAvatarUrl, prefill 
                                 />
                             </div>
                             <p className="text-sm text-[var(--ink-soft)] mt-3">
-                                It must be a photo of you, clearly showing your face. Not a
-                                logo, not a cartoon, not a stranger, not your dog. If you
+                                It must be a photo of you, clearly showing your face. If you
                                 break the contract, this is the face everyone sees.
                             </p>
                         </div>
@@ -912,8 +893,7 @@ export default function SignRitual({ defaultFullName, defaultAvatarUrl, prefill 
                                 </p>
                             </div>
                             <p className="mb-4 text-[var(--ink-soft)]">
-                                Only {atHandle(username)} appears on this contract while it
-                                holds. The name and face above are sealed until it breaks.
+                                The name and face above are sealed until you break the contract.
                             </p>
 
                             <p className="mb-4">
@@ -921,7 +901,7 @@ export default function SignRitual({ defaultFullName, defaultAvatarUrl, prefill 
                             </p>
                             <p className="mb-4">
                                 2. THE PROOF. I will post {proofDescription.trim().replace(/\.+$/, "")},{" "}
-                                {cadencePhrase(cadence)}. The check runs automatically.
+                                {cadencePhrase(cadence)}.
                                 Missing proof breaks this contract.
                             </p>
                             <p className="mb-4">

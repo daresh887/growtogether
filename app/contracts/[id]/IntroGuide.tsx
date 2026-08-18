@@ -66,7 +66,7 @@ export default function IntroGuide({
                     <p className="type-doc leading-relaxed mb-8">
                         You must post {cadencePhrase(cadence)}.{" "}
                         Remember, if the timer runs out, your contract is breached and your name,
-                        your face, and your terms go on the front page.
+                        your face, and your promise go on the front page.
                     </p>
                     <button className={primaryBtn} onClick={() => setStep(1)}>
                         Next
