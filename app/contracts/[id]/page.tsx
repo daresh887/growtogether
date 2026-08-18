@@ -102,7 +102,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
                             {contract.realName && (
                                 <>, who posted here as {atHandle(contract.username)},</>
                             )}{" "}
-                            signed to {contract.commitment.replace(/\.+$/, "")}, and
+                            signed to &ldquo;{contract.commitment.replace(/\.+$/, "")}&rdquo;, and
                             promised proof {cadencePhrase(contract.cadence)}. They stopped.
                         </p>
                         {/* The promise they made themselves at signing, quoted back.

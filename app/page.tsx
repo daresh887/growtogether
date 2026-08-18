@@ -48,7 +48,7 @@ export default async function Landing() {
                     </h1>
 
                     <p className="mt-8 max-w-xl leading-relaxed text-[var(--ink-soft)]">
-                        Pick a username, commit to one thing, and post proof that
+                        Sign a contract through which you commit to one thing, and post proof that
                         you&rsquo;re doing it. If you give up, your real name, face, and broken promise are published on our front page. Everyone will see that you failed.
                     </p>
 

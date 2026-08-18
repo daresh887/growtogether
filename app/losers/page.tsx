@@ -91,7 +91,7 @@ export default async function Losers() {
                                                 </p>
                                             )}
                                             <p className="type-doc mt-2 leading-relaxed text-[0.9375rem]">
-                                                Signed to {contract.commitment.replace(/\.+$/, "")}. Stopped.
+                                                Signed to &ldquo;{contract.commitment.replace(/\.+$/, "")}&rdquo;. Stopped.
                                             </p>
                                             {contract.promise && (
                                                 <div
