@@ -1,7 +1,8 @@
 "use client";
 
-import { Fragment, useSyncExternalStore } from "react";
+import { Fragment, useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { DeadlineState } from "@/app/actions/contracts";
 import { windowWord } from "@/utils/contract-shared";
 
@@ -72,9 +73,8 @@ function subscribeToClock(onTick: () => void) {
 
 /**
  * The tape: the running clock, pinned to the top of the viewport so it is
- * never scrolled away. It never counts calendar days — a rolling contract
- * shows the time left since the last post, a counted one shows the quota for
- * the current window and how long is left to fill it.
+ * never scrolled away. It never counts calendar days — it shows the quota for
+ * the window you are in and how long is left to fill it.
  *
  * The hairline along the bottom edge is the window draining in real time.
  * Past the deadline the clock does not stop; it inverts and counts the
@@ -94,6 +94,23 @@ export default function DeadlineBar({
         () => tick,
         () => 0
     );
+    const router = useRouter();
+    const rolledOver = useRef(0);
+
+    // A met quota belongs to the window it was filed in. When that window runs
+    // out the next one opens empty, and only the server knows the new count —
+    // so ask it, once, the moment the clock reaches zero. Without this the tape
+    // would sit on a dead deadline claiming 1/1 into a day nothing was posted.
+    //
+    // A missed window is not refreshed: the clock is meant to keep counting the
+    // overdraft upward rather than quietly turn over.
+    const spent = deadline.state === "safe" && now > 0 && target > 0 && now >= target;
+    useEffect(() => {
+        if (spent && rolledOver.current !== target) {
+            rolledOver.current = target;
+            router.refresh();
+        }
+    }, [spent, target, router]);
 
     if (deadline.state === "none") return null;
 

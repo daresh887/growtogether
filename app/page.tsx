@@ -11,7 +11,7 @@ import ProofEntry from "@/components/ledger/ProofEntry";
 export const metadata = {
     title: "LockIn Buddy",
     description:
-        "Commit to one thing under a username and post proof. Your real name and face are sealed against the contract. Give up, and the seal comes off.",
+        "Sign a contract through which you commit to one thing, and post proof that you’re doing it. If you give up, your real name, face, and broken promise are published on our front page. Everyone will see that you failed.",
 };
 
 const ROTATIONS = [-6, -4, -8];
@@ -102,7 +102,7 @@ export default async function Landing() {
                                                 </p>
                                             )}
                                             <p className="type-doc mt-2 leading-relaxed text-[0.9375rem]">
-                                                Signed to {contract.commitment.replace(/\.+$/, "")}. Stopped.
+                                                Signed to &ldquo;{contract.commitment.replace(/\.+$/, "")}&rdquo;. Stopped.
                                             </p>
                                             <Link
                                                 href={`/contracts/${contract.id}#wall`}

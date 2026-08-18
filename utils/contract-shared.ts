@@ -135,10 +135,11 @@ export type Cadence = "daily" | "weekdays" | "three_per_week" | "weekly";
  * A cadence is a window and a quota, never a calendar.
  *
  * `windowHours` is how long the window lasts, `required` is how many posts
- * it demands. `rolling` windows restart from your last post — a daily
- * contract gives you 24 hours from signing, then 24 hours from every post
- * after that. Fixed windows run back-to-back from the moment you signed,
- * so a 3× a week contract shows 1/3 done and one week on the clock.
+ * it demands. Windows run back-to-back from the moment you signed and never
+ * move: a daily contract gives you 24 hours from signing, then the next 24,
+ * and posting fills the window you are in rather than starting a new one.
+ * So a 3× a week contract shows 1/3 done and one week on the clock, and a
+ * daily one shows 1/1 done with the rest of the day still to run.
  */
 export const CADENCES: {
     value: Cadence;
@@ -146,7 +147,6 @@ export const CADENCES: {
     phrase: string;
     windowHours: number;
     required: number;
-    rolling: boolean;
 }[] = [
     {
         value: "daily",
@@ -154,7 +154,6 @@ export const CADENCES: {
         phrase: "at least once every 24 hours",
         windowHours: 24,
         required: 1,
-        rolling: true,
     },
     {
         value: "weekdays",
@@ -162,7 +161,6 @@ export const CADENCES: {
         phrase: "at least five times each week",
         windowHours: 168,
         required: 5,
-        rolling: false,
     },
     {
         value: "three_per_week",
@@ -170,7 +168,6 @@ export const CADENCES: {
         phrase: "at least three times each week",
         windowHours: 168,
         required: 3,
-        rolling: false,
     },
     {
         value: "weekly",
@@ -178,7 +175,6 @@ export const CADENCES: {
         phrase: "at least once each week",
         windowHours: 168,
         required: 1,
-        rolling: false,
     },
 ];
 

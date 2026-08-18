@@ -244,8 +244,8 @@ function assertValidTimezone(tz: string): string {
 }
 
 // Windows are measured in plain elapsed time from the contract's anchor,
-// so no timezone arithmetic is needed. The clock starts the moment you
-// sign; a rolling cadence restarts it the moment you post.
+// so no timezone arithmetic is needed. The clock starts the moment you sign
+// and every window after that follows on from the last, whatever you post.
 function windowMs(cadence: string): number {
     return cadenceSpec(cadence).windowHours * 3_600_000;
 }
@@ -910,7 +910,6 @@ export type DeadlineState =
           deadline: string;
           done: number;
           required: number;
-          rolling: boolean;
           windowHours: number;
           intro: boolean;
           lastPostAt: string | null;
@@ -928,10 +927,11 @@ export type DeadlineState =
 /**
  * How long the current user has left before they breach.
  *
- * The clock is elapsed time, not calendar time. A rolling cadence (daily)
- * gives you `windowHours` from signing, and `windowHours` again from every
- * post after that. A fixed cadence runs back-to-back windows from the
- * signing instant and counts the posts inside the current one.
+ * The clock is elapsed time, not calendar time, and the windows never move:
+ * they run back-to-back from the signing instant, and the count is of posts
+ * filed inside the one you are in. Posting does not start a new window, it
+ * fills the current one — so a daily contract reads 1/1 with the rest of the
+ * day still on the clock, and rolls over to 0/1 when that day runs out.
  *
  * `intro` marks a contract that has never been posted to: the signer
  * still owes the introduction that opens their record.
@@ -965,8 +965,8 @@ export async function getMyDeadline(): Promise<DeadlineState> {
     const spec = cadenceSpec(contract.cadence);
     const span = windowMs(contract.cadence);
 
-    // One query gives both the total (has this record been opened?) and
-    // the most recent post (where a rolling window restarts).
+    // One query gives both the total (has this record been opened?) and the
+    // most recent post, which the composer and the tape both quote back.
     const { data: latest, count: everPosted } = await supabase
         .from("checkins")
         .select("created_at", { count: "exact" })
@@ -977,23 +977,11 @@ export async function getMyDeadline(): Promise<DeadlineState> {
     const lastPostAt = latest?.[0]?.created_at || null;
     const intro = (everPosted || 0) === 0;
 
-    if (spec.rolling) {
-        // 24 hours from signing, or from your last post — whichever is later.
-        const from = lastPostAt ? Math.max(anchor, new Date(lastPostAt).getTime()) : anchor;
-        return {
-            state: "due",
-            contractId: contract.id,
-            deadline: new Date(from + span).toISOString(),
-            done: 0,
-            required: spec.required,
-            rolling: true,
-            windowHours: spec.windowHours,
-            intro,
-            lastPostAt,
-        };
-    }
-
-    // Fixed windows run back-to-back from the anchor.
+    // Windows run back-to-back from the anchor and never move. Posting fills
+    // the window you are in rather than starting a fresh one, so the count is
+    // simply of what has been filed since this window opened — the
+    // introduction included, since it is an ordinary post like any other.
+    // When the window runs out the next one opens empty, back to owing one.
     const windowStart = anchor + Math.floor((now - anchor) / span) * span;
     const windowEnd = windowStart + span;
 
@@ -1021,7 +1009,6 @@ export async function getMyDeadline(): Promise<DeadlineState> {
         deadline: new Date(windowEnd).toISOString(),
         done,
         required: spec.required,
-        rolling: false,
         windowHours: spec.windowHours,
         intro,
         lastPostAt,

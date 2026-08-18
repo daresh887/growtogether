@@ -114,8 +114,7 @@ export default function ContractDocument({ contract }: { contract: ContractRecor
                             Signed and sealed
                         </p>
                         <p className="mt-2 text-[var(--ink-soft)]">
-                            A real name, a face and a signature are held against this
-                            contract. They are published here the day it is broken.
+                            A real name, a face and a signature are held behind this contract. They will be published only if the contract is broken.
                         </p>
                     </div>
                 )}
