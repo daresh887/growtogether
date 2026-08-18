@@ -29,6 +29,20 @@ export type PublicProfile = {
     socialHandle: string;
 };
 
+/**
+ * Google hands Supabase its own profile picture and it lands in
+ * user_metadata.avatar_url without anyone asking for it. That is their
+ * picture, not one you chose, so it is never treated as yours. Only a photo
+ * uploaded to our own avatars bucket counts — that fallback exists purely so
+ * a half-finished lock-in can prefill the picture you already uploaded.
+ */
+function ownUploadedPhoto(url: unknown): string | null {
+    if (typeof url !== "string" || !url) return null;
+    const base = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "");
+    if (!base) return null;
+    return url.startsWith(`${base}/storage/v1/object/public/avatars/`) ? url : null;
+}
+
 export async function getProfile(): Promise<ProfileData | null> {
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -48,7 +62,7 @@ export async function getProfile(): Promise<ProfileData | null> {
         email: user.email || "",
         username: row?.username || "",
         display_name: row?.display_name || metadata.display_name || metadata.full_name || "",
-        avatar_url: row?.avatar_url || metadata.avatar_url || null,
+        avatar_url: row?.avatar_url || ownUploadedPhoto(metadata.avatar_url),
         bio: row?.bio || "",
         social_platform: row?.social_platform || "",
         social_handle: row?.social_handle || "",
