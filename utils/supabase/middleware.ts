@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // The session is unrecoverable: the refresh token is gone, spent, or its
@@ -23,7 +24,25 @@ function isStaleSession(error: unknown): boolean {
 
 // Nobody is signed in. Normal for every logged-out visitor, not an error.
 function isMissingSession(error: unknown): boolean {
-    return authErrorCode(error) === 'session_missing' || authErrorCode(error) === ''
+    return authErrorCode(error) === 'session_missing'
+}
+
+/**
+ * Is there a session cookie on this request at all? The difference between
+ * "logged out" and "broken" is not in the error — a cookie the client cannot
+ * even parse comes back with no code on it — it is here. No cookie and a
+ * failure means a visitor who was never signed in. A cookie and a failure
+ * means the cookie is the problem.
+ */
+function hasAuthCookie(request: NextRequest): boolean {
+    return request.cookies
+        .getAll()
+        .some(
+            (c) =>
+                c.name.startsWith('sb-') &&
+                c.name.includes('auth-token') &&
+                !c.name.includes('code-verifier')
+        )
 }
 
 /**
@@ -82,12 +101,26 @@ export async function updateSession(request: NextRequest) {
         if (error) throw error
         user = data.user
     } catch (error: unknown) {
-        // A refresh token the server no longer recognises (the session was
-        // revoked, the auth users were wiped, or the token was already
-        // rotated). Supabase keeps failing on it until the cookie is gone,
-        // which looks like "I can't sign in with Google any more" — so drop
-        // the dead session here and let them start a clean one.
-        if (isStaleSession(error)) {
+        // Supabase itself is unreachable or answering 5xx. The cookie may be
+        // perfectly good, so it stays: signing everyone out over a blip in
+        // someone else's network is the worse failure.
+        if (isAuthRetryableFetchError(error)) {
+            console.error('Auth check could not reach Supabase:', error)
+        } else if (isStaleSession(error) || hasAuthCookie(request)) {
+            // Either a refresh token the server no longer recognises (the
+            // session was revoked, the auth users were wiped, the token was
+            // already rotated), or a cookie that cannot be read at all.
+            //
+            // Both look identical from the outside, and both are fatal in the
+            // same way: Supabase keeps failing on that cookie forever, every
+            // protected page bounces to /login, and signing in again writes a
+            // fresh session that the ruined cookie still shadows. That is the
+            // "I complete the Google sign-in and land back on the sign-in
+            // page" loop. It only breaks if something throws the cookie away,
+            // so this is where that happens.
+            if (!isStaleSession(error) && !isMissingSession(error)) {
+                console.error('Unreadable session cookie, clearing it:', error)
+            }
             clearAuthCookies(request, supabaseResponse)
         } else if (!isMissingSession(error)) {
             console.error('Auth check failed in middleware:', error)
@@ -113,7 +146,23 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
         url.searchParams.set('next', request.nextUrl.pathname)
-        return NextResponse.redirect(url)
+        const redirectResponse = NextResponse.redirect(url)
+        // Carry over whatever was written above — a refreshed session, or the
+        // instruction to delete a ruined one. This is the bounce that runs
+        // when a cookie is broken, so dropping these headers is what made the
+        // breakage permanent: the cookie was cleared on a response nobody
+        // ever sent, and the next request arrived with it still attached.
+        //
+        // With one exception, for the same reason clearAuthCookies has it. A
+        // failed session read makes the client bin the code verifier along
+        // with everything else, and forwarding that would cancel an OAuth
+        // sign-in that is still in flight. Its deletion is the one header
+        // this bounce is right to swallow.
+        for (const cookie of supabaseResponse.cookies.getAll()) {
+            const deletesCodeVerifier = cookie.name.includes('code-verifier') && !cookie.value
+            if (!deletesCodeVerifier) redirectResponse.cookies.set(cookie)
+        }
+        return redirectResponse
     }
 
     // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
