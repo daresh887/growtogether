@@ -160,7 +160,7 @@ export default async function Landing() {
                     href="https://x.com/DariusHang"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="overline sentence-case ink-link"
+                    className="overline ink-link"
                 >
                     support the dev
                 </a>
