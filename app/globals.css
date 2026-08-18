@@ -46,6 +46,16 @@ body {
   text-decoration: none;
 }
 
+/* An overline that is a sentence rather than a label — it keeps the quiet
+   treatment but says its piece in normal case. Tailwind's normal-case
+   cannot do this: utilities sit in @layer utilities and the rule above is
+   unlayered, so the layered utility loses no matter its specificity. The
+   tracking comes down with the caps; 0.14em is spacing for shouting. */
+.ledger .overline.sentence-case {
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+
 /* --------------------------------------------------------------------------
    Effect 4 (approved): ink hover states.
    Links get an underline that draws itself in.

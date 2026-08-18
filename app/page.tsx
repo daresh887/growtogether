@@ -49,10 +49,7 @@ export default async function Landing() {
 
                     <p className="mt-8 max-w-xl leading-relaxed text-[var(--ink-soft)]">
                         Pick a username, commit to one thing, and post proof that
-                        you&rsquo;re doing it. You sign the contract with your real name
-                        and your real face &mdash; but they stay sealed, and nobody can see
-                        them while you keep going. Give up, and the seal comes off on
-                        the front page.
+                        you&rsquo;re doing it. If you give up, your real name, face, and broken promise are published on our front page. Everyone will see that you failed.
                     </p>
 
                     <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
@@ -154,8 +151,19 @@ export default async function Landing() {
                 </section>
             </main>
 
-            <footer className="px-6 sm:px-10 py-8 border-t border-[var(--rule)]">
+            <footer className="px-6 sm:px-10 py-8 border-t border-[var(--rule)] flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
                 <p className="overline">LockIn Buddy</p>
+                {/* The contract says a breach is published on our X. Naming
+                    the account here is the difference between a threat and
+                    an address. */}
+                <a
+                    href="https://x.com/DariusHang"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="overline sentence-case ink-link"
+                >
+                    support the dev
+                </a>
             </footer>
         </div>
     );
