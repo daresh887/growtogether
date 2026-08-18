@@ -42,9 +42,37 @@ export async function GET(request: Request) {
         const supabase = await createClient()
         const { data: exchanged, error } = await supabase.auth.exchangeCodeForSession(code)
 
-        // What the cookie store holds now decides everything downstream: if
-        // no sb- session cookie appears here, nothing was ever written and no
-        // amount of redirect handling will help.
+        if (error) {
+            // Without this, every OAuth failure looks identical from the
+            // outside: expired code, missing PKCE verifier, misconfigured
+            // redirect URL. Say which one it was.
+            console.error('OAuth code exchange failed:', error.code || error.status, error.message)
+        }
+
+        // The exchange hands back a valid session and then loses it.
+        //
+        // auth-js fires the SIGNED_IN event that persists a session from
+        // inside setTimeout(..., 0) and does not await it, while @supabase/ssr
+        // writes the session cookie only in response to that event. In a route
+        // handler nothing waits for a stray timer: the redirect goes out and
+        // the invocation ends before it ever fires, so the cookie is never
+        // written and the next request looks like a logged-out visitor.
+        //
+        // setSession takes the same path with the notification awaited, so the
+        // cookie is written before we reply. Passing the tokens we already hold
+        // costs no extra round trip against a fresh, unexpired session.
+        if (!error && exchanged?.session) {
+            const { error: persistError } = await supabase.auth.setSession({
+                access_token: exchanged.session.access_token,
+                refresh_token: exchanged.session.refresh_token,
+            })
+            if (persistError) {
+                console.error('Could not persist the session after OAuth:', persistError.message)
+            }
+        }
+
+        // Read after the persist, so this says whether the session cookie
+        // actually made it into the store rather than whether it was promised.
         const store = await cookies()
         diag.push(
             `exchange=${error ? `FAIL(${error.code || error.status})` : 'ok'}`,
@@ -57,12 +85,6 @@ export async function GET(request: Request) {
             `setAll=[${setAllTrace.join(' ') || 'NEVER CALLED'}]`
         )
 
-        if (error) {
-            // Without this, every OAuth failure looks identical from the
-            // outside: expired code, missing PKCE verifier, misconfigured
-            // redirect URL. Say which one it was.
-            console.error('OAuth code exchange failed:', error.code || error.status, error.message)
-        }
         if (!error) {
             let redirectPath = next
 
