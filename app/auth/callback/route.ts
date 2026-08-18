@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { createClient } from '@/utils/supabase/server'
+import { createClient, setAllTrace } from '@/utils/supabase/server'
 
 // TEMPORARY — remove with app/auth/debug/route.ts once Google sign-in is
 // fixed. A breadcrumb of what happened in here, readable afterwards even
@@ -53,7 +53,8 @@ export async function GET(request: Request) {
                 .getAll()
                 .filter((c) => c.name.startsWith('sb-'))
                 .map((c) => `${c.name}:${c.value.length}b`)
-                .join(',') || 'NONE'}`
+                .join(',') || 'NONE'}`,
+            `setAll=[${setAllTrace.join(' ') || 'NEVER CALLED'}]`
         )
 
         if (error) {
